@@ -22,6 +22,31 @@ export interface RetroAnalysisResponse {
   didntGoWell: RetroInsight[];
 }
 
+export interface RetroAnalysisSchema {
+  wentWell: Array<{
+    title: string;
+    description: string;
+    evidenceCount: number;
+    evidence?: string[];
+  }>;
+  didntGoWell: Array<{
+    title: string;
+    description: string;
+    evidenceCount: number;
+    evidence?: string[];
+  }>;
+}
+
+export interface RetroAnalysisResponse {
+  sprintName: string;
+  summary: {
+    totalFiles: number;
+    generatedAt: string;
+  };
+  wentWell: RetroInsight[];
+  didntGoWell: RetroInsight[];
+}
+
 export interface UploadResult {
   sprintName: string;
   uploadedFiles: TranscriptFileMeta[];

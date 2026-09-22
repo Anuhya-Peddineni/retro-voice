@@ -11,6 +11,7 @@ const envSchema = z.object({
   GCS_BUCKET_NAME: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-3.5-flash'),
   GOOGLE_GENAI_LOCATION: z.string().default('us-central1'),
+  GEMINI_API_KEY: z.string().optional(),
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
   MAX_FILE_SIZE_BYTES: z.coerce.number().int().positive().default(2_097_152),
   MAX_FILES_PER_UPLOAD: z.coerce.number().int().positive().default(10),

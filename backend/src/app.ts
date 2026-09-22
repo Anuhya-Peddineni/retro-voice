@@ -4,9 +4,13 @@ import { errorMiddleware } from './middleware/error.middleware';
 import { healthRouter } from './routes/health.routes';
 import { createSprintRouter } from './routes/sprint.routes';
 import { LocalStorageService } from './services/storage.service';
+import { GeminiService } from './services/gemini.service';
+import { AnalysisService } from './services/analysis.service';
 import type { AppEnv } from './config/env';
 
-export function createApp(env: Pick<AppEnv, 'FRONTEND_ORIGIN'>): Express {
+export function createApp(
+  env: Pick<AppEnv, 'FRONTEND_ORIGIN' | 'GEMINI_MODEL'> & { geminiApiKey?: string },
+): Express {
   const app = express();
 
   app.disable('x-powered-by');
@@ -16,7 +20,15 @@ export function createApp(env: Pick<AppEnv, 'FRONTEND_ORIGIN'>): Express {
 
   // Initialize storage service (will be replaced with GCS in Phase 8)
   const storageService = new LocalStorageService();
-  app.use('/api/sprints', createSprintRouter(storageService));
+
+  // Initialize optional analysis services (requires Gemini API key)
+  let analysisService: AnalysisService | undefined;
+  if (env.geminiApiKey) {
+    const geminiService = new GeminiService(env.geminiApiKey, env.GEMINI_MODEL || 'gemini-3.5-flash');
+    analysisService = new AnalysisService(storageService, geminiService);
+  }
+
+  app.use('/api/sprints', createSprintRouter(storageService, analysisService));
 
   app.get('/api', (_req, res) => {
     res.json({
