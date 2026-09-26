@@ -1,5 +1,10 @@
 node_modules/
 dist/
-.env
+.vite/
+.firebase/
+
+.env*
+!.env.example
+
 .DS_Store
 .idea/
