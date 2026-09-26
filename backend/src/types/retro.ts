@@ -4,6 +4,13 @@ export interface TranscriptFileMeta {
   size: number;
 }
 
+export interface RetroAnalysisInsight {
+  title: string;
+  description: string;
+  evidenceCount: number;
+  evidence?: string[];
+}
+
 export interface RetroInsight {
   id: string;
   title: string;
@@ -12,29 +19,9 @@ export interface RetroInsight {
   evidence?: string[];
 }
 
-export interface RetroAnalysisResponse {
-  sprintName: string;
-  summary: {
-    totalFiles: number;
-    generatedAt: string;
-  };
-  wentWell: RetroInsight[];
-  didntGoWell: RetroInsight[];
-}
-
 export interface RetroAnalysisSchema {
-  wentWell: Array<{
-    title: string;
-    description: string;
-    evidenceCount: number;
-    evidence?: string[];
-  }>;
-  didntGoWell: Array<{
-    title: string;
-    description: string;
-    evidenceCount: number;
-    evidence?: string[];
-  }>;
+  wentWell: RetroAnalysisInsight[];
+  didntGoWell: RetroAnalysisInsight[];
 }
 
 export interface RetroAnalysisResponse {

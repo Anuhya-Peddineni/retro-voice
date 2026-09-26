@@ -22,6 +22,18 @@ describe('RetroVoice Backend - Phase 3', () => {
       expect(normalizeSprintName('MySprint')).toBe('mysprint');
       expect(normalizeSprintName('  test  ')).toBe('test');
     });
+
+    it('rejects transcript file names containing path traversal patterns', () => {
+      const result = validateUploadedFiles([
+        {
+          originalname: '../retro.txt',
+          size: 7,
+        } as Express.Multer.File,
+      ]);
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('must not include folders');
+    });
   });
 
   describe('LocalStorageService', () => {
@@ -73,10 +85,13 @@ describe('RetroVoice Backend - Phase 3', () => {
   });
 
   describe('Sprint API Endpoints', () => {
-    let app: Express.Application;
+    let app: ReturnType<typeof createApp>;
 
     beforeEach(() => {
-      app = createApp({ FRONTEND_ORIGIN: 'http://localhost:5173' });
+      app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService() },
+      );
     });
 
     it('GET /api/health returns status ok', async () => {

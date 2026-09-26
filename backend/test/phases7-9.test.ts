@@ -1,6 +1,7 @@
 import request from 'supertest';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { createApp } from '../src/app';
+import { LocalStorageService } from '../src/services/storage.service';
 import type { RetroAnalysisSchema } from '../src/types/retro';
 
 describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
@@ -58,8 +59,10 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
     let app: any;
 
     beforeEach(() => {
-      // Create app without Gemini API key for testing (will disable analysis)
-      app = createApp({ FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.5-flash' });
+      app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService() },
+      );
     });
 
     it('POST /api/sprints/:sprintName/analyze is accessible', async () => {
@@ -101,7 +104,10 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
     let app: any;
 
     beforeEach(() => {
-      app = createApp({ FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.5-flash' });
+      app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService() },
+      );
     });
 
     it('returns consistent error format', async () => {
@@ -214,7 +220,10 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
     let app: any;
 
     beforeEach(() => {
-      app = createApp({ FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.5-flash' });
+      app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService() },
+      );
     });
 
     it('handles very long sprint names (max length)', async () => {

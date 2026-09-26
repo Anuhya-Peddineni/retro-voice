@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 
-const ALLOWED_EXTENSIONS = ['.txt'];
+const ALLOWED_EXTENSIONS = ['.txt', '.vtt'];
 const MAX_FILE_SIZE = 2_097_152; // 2MB
 const MAX_FILES = 10;
 
@@ -17,12 +17,19 @@ export function validateUploadedFiles(files: Express.Multer.File[] | undefined):
   }
 
   for (const file of files) {
+    if (hasUnsafePathSegments(file.originalname)) {
+      return {
+        valid: false,
+        error: `Invalid file name: ${file.originalname}. File names must not include folders or path traversal patterns.`,
+      };
+    }
+
     // Check file extension
     const ext = getFileExtension(file.originalname);
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return {
         valid: false,
-        error: `File type not supported: ${file.originalname}. Only .txt files are allowed.`,
+        error: `File type not supported: ${file.originalname}. Only .txt and .vtt files are allowed currently.`,
       };
     }
 
@@ -45,5 +52,9 @@ export function validateUploadedFiles(files: Express.Multer.File[] | undefined):
 function getFileExtension(filename: string): string {
   const index = filename.lastIndexOf('.');
   return index >= 0 ? filename.substring(index).toLowerCase() : '';
+}
+
+function hasUnsafePathSegments(filename: string): boolean {
+  return filename.includes('/') || filename.includes('\\') || filename.includes('..');
 }
 

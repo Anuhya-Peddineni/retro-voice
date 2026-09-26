@@ -5,7 +5,9 @@ const env = loadEnv();
 const app = createApp({
   FRONTEND_ORIGIN: env.FRONTEND_ORIGIN,
   GEMINI_MODEL: env.GEMINI_MODEL,
-  geminiApiKey: env.GEMINI_API_KEY,
+  GOOGLE_CLOUD_PROJECT: env.GOOGLE_CLOUD_PROJECT,
+  GCS_BUCKET_NAME: env.GCS_BUCKET_NAME,
+  GOOGLE_GENAI_LOCATION: env.GOOGLE_GENAI_LOCATION,
 });
 
 const server = app.listen(env.PORT, () => {

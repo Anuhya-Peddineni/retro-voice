@@ -3,6 +3,8 @@
  * Uses native structured output with schema enforcement.
  */
 
+import { Type, type Schema } from '@google/genai';
+
 export const retrospectiveSystemPrompt = `You are an expert agile retrospective facilitator. Your role is to analyze sprint discussion transcripts and extract team-level retrospective insights.
 
 You MUST follow these rules:
@@ -49,45 +51,30 @@ For each insight, provide:
 Remember: Remove all personal attribution. Focus on patterns, not people.`;
 };
 
-export interface RetroAnalysisSchema {
-  wentWell: Array<{
-    title: string;
-    description: string;
-    evidenceCount: number;
-    evidence?: string[];
-  }>;
-  didntGoWell: Array<{
-    title: string;
-    description: string;
-    evidenceCount: number;
-    evidence?: string[];
-  }>;
-}
-
-export const retroAnalysisJsonSchema = {
-  type: 'object' as const,
+export const retroAnalysisJsonSchema: Schema = {
+  type: Type.OBJECT,
   properties: {
     wentWell: {
-      type: 'array',
+      type: Type.ARRAY,
       description: 'Positive team observations and successes',
       items: {
-        type: 'object',
+        type: Type.OBJECT,
         properties: {
           title: {
-            type: 'string',
+            type: Type.STRING,
             description: 'Concise title of the insight',
           },
           description: {
-            type: 'string',
+            type: Type.STRING,
             description: 'Detailed description of the observation',
           },
           evidenceCount: {
-            type: 'integer',
+            type: Type.INTEGER,
             description: 'Number of times this pattern appeared',
           },
           evidence: {
-            type: 'array',
-            items: { type: 'string' },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description: 'Anonymized supporting quotes or paraphrases',
           },
         },
@@ -95,26 +82,26 @@ export const retroAnalysisJsonSchema = {
       },
     },
     didntGoWell: {
-      type: 'array',
+      type: Type.ARRAY,
       description: 'Challenges and areas for improvement',
       items: {
-        type: 'object',
+        type: Type.OBJECT,
         properties: {
           title: {
-            type: 'string',
+            type: Type.STRING,
             description: 'Concise title of the challenge',
           },
           description: {
-            type: 'string',
+            type: Type.STRING,
             description: 'Detailed description of the challenge',
           },
           evidenceCount: {
-            type: 'integer',
+            type: Type.INTEGER,
             description: 'Number of times this pattern appeared',
           },
           evidence: {
-            type: 'array',
-            items: { type: 'string' },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description: 'Anonymized supporting quotes or paraphrases',
           },
         },
@@ -124,4 +111,3 @@ export const retroAnalysisJsonSchema = {
   },
   required: ['wentWell', 'didntGoWell'],
 };
-
