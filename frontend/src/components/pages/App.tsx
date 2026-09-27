@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { ColumnKey, FeedbackItem, Page, RetroAnalysisResponse } from './types/api';
-import { AppHeader } from './components/layout/AppHeader';
-import { AppFooter } from './components/layout/AppFooter';
-import { HomePage } from './components/pages/HomePage';
-import { CreateSprintPage } from './components/pages/CreateSprintPage';
-import { BoardPage } from './components/pages/BoardPage';
-import { ContactPage } from './components/pages/ContactPage';
-import { HelpPage } from './components/pages/HelpPage';
-import { analyzeSprint, fetchSprints, uploadSprintTranscripts } from './lib/api';
+import type { ColumnKey, FeedbackItem, Page, RetroAnalysisResponse } from '../../types/api';
+import { AppHeader } from '../layout/AppHeader';
+import { AppFooter } from '../layout/AppFooter';
+import { HomePage } from './HomePage';
+import { CreateSprintPage } from './CreateSprintPage';
+import { BoardPage } from './BoardPage';
+import { ContactPage } from './ContactPage';
+import { HelpPage } from './HelpPage';
+import { analyzeSprint, fetchSprints, uploadSprintTranscripts } from '../../lib/api';
 
 export default function App() {
   const [page, setPage] = useState<Page>('home');
@@ -117,7 +117,7 @@ export default function App() {
         {page === 'create' && (
           <CreateSprintPage
             existingSprints={sprints}
-            onCreated={(sprint) => {
+            onCreated={(sprint: string) => {
               setSelectedSprint(sprint);
               setPage('board');
             }}
@@ -129,7 +129,7 @@ export default function App() {
           <BoardPage
             sprints={sprints}
             selectedSprint={selectedSprint}
-            onSelectSprint={(sprint) => {
+            onSelectSprint={(sprint: string) => {
               setSelectedSprint(sprint);
               setAnalysisError(null);
             }}
