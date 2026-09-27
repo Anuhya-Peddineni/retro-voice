@@ -55,3 +55,12 @@ export interface AppError {
   message: string;
 }
 
+export type Page = 'home' | 'create' | 'board' | 'contact' | 'help';
+export type TranscriptSource = 'existing' | 'upload';
+export type ColumnKey = 'well' | 'improve' | 'actions';
+export interface FeedbackItem {
+  id?: string;
+  text: string;
+  author: string;
+}
+
