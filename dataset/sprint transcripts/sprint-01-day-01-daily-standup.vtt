@@ -1,0 +1,65 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 01 of 10 | 2026-04-06 | Focus: Catalog search filters
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 01 of the sprint. Let’s get started. We’re trying to land category, price, and availability filters. John, I saw two versions of the stock rule in the ticket. Which one are we using?
+
+00:01:10.000 --> 00:01:59.000
+<v John Doe>Hide unavailable by default, but let the shopper opt in. Sorry, I thought I’d updated the acceptance note yesterday. Apparently I changed the mock, not the story.
+
+00:02:12.000 --> 00:03:01.000
+<v Alex Smith>I used the story, so the API has no opt-in field yet. It returns only available products.
+
+00:03:14.000 --> 00:04:03.000
+<v John Doe>Right, that’s on me. I’ll update the note now. For null stock, treat it as unavailable.
+
+00:04:01.000 --> 00:04:57.000
+<v Michael Brown>Okay. I’ll add `includeUnavailable`, default false, and return the normalized filter values so the page can restore them.
+
+00:05:18.000 --> 00:06:07.000
+<v David Wilson>That works. I named the control `inStock` in the frontend. I can change it, but I need the field name to stop moving around. Is `includeUnavailable` final?
+
+00:06:20.000 --> 00:07:09.000
+<v Alex Smith>Yes. I’ll put it on the contract page and link that from the ticket. The ticket text is clearly lagging behind.
+
+00:07:22.000 --> 00:08:11.000
+<v Emily Davis>I checked the query plan. Category and price together look fine on the current catalog data. The full catalog data has null inventory values, though, so I’ll include those in the query check.
+
+00:08:24.000 --> 00:09:13.000
+<v Sarah Miller>I’m writing the cases. I can do category and price locally. I can’t get into the test dashboard; my catalog-reader role disappeared when the environment was reset.
+
+00:09:26.000 --> 00:10:15.000
+<v Robert Taylor>I restored catalog-reader this morning. The dashboard role is separate, I just found that out. I’ll request release-viewer too.
+
+00:10:13.000 --> 00:11:09.000
+<v Sarah Miller>Ah. That explains why the API collection works and the report page doesn’t. I thought I’d broken my account.
+
+00:11:30.000 --> 00:12:19.000
+<v Jane Doe>Let’s keep the API contract on the page, not only in chat. David, Michael, Sarah, I’ll tag all three when it changes.
+
+00:12:32.000 --> 00:13:21.000
+<v David Wilson>Please do. I didn’t see the note about null stock until after I wired the empty state. ... I can still keep going with the other filters.
+
+00:13:34.000 --> 00:14:23.000
+<v Michael Brown>I’ve got the endpoint mostly there. One question: should count be before or after pagination?
+
+00:14:36.000 --> 00:15:25.000
+<v David Wilson>After filters, before pagination, otherwise I can’t show “18 results” when there are several pages.
+
+00:15:38.000 --> 00:16:27.000
+<v Michael Brown>Yep, that’s what I meant. I said that backwards. Count after filtering, before slicing the page.
+
+00:16:25.000 --> 00:17:21.000
+<v Alex Smith>I’ll review the endpoint, but I’m covering the payment incident this morning. If the PR is up after lunch, Emily can look at the query part.
+
+00:17:42.000 --> 00:18:31.000
+<v Emily Davis>I can review the query; I’m not comfortable approving the response contract without Alex.
+
+00:18:44.000 --> 00:19:33.000
+<v John Doe>That’s fine. We don’t need the full flow today, just the filter rules. I’ll stay out of the implementation unless the requirements move.
+
+00:19:46.000 --> 00:20:35.000
+<v Jane Doe>Sarah, keep the cases moving while Robert sorts the dashboard role. Michael posts the endpoint draft; David uses the canonical page. We’ll check the integrated build after lunch.

@@ -1,8 +1,8 @@
-import React from 'react';
+import type React from 'react';
 import type { ColumnKey, FeedbackItem } from '../../types/api';
 import { Button, Heading } from '../common/UI';
 import { PlusIcon } from '../common/Icons';
-import { FeedbackCard } from './FeedbackCard';
+import { FeedbackCard, type AnalysisCardStatus } from './FeedbackCard';
 
 export function BoardColumn({
   type,
@@ -11,7 +11,13 @@ export function BoardColumn({
   generatedItems = [],
   manualItems = [],
   completedActionItems = [],
+  analysisCardStatus = {},
+  onAcceptAnalysisCard,
+  onRejectAnalysisCard,
+  onEditAnalysisCard,
   onToggleActionItem,
+  onEditManualItem,
+  onDeleteManualItem,
   onOpenComposer,
 }: {
   type: ColumnKey;
@@ -20,7 +26,13 @@ export function BoardColumn({
   generatedItems?: FeedbackItem[];
   manualItems?: FeedbackItem[];
   completedActionItems?: string[];
+  analysisCardStatus?: Record<string, AnalysisCardStatus>;
+  onAcceptAnalysisCard?: (id: string) => void;
+  onRejectAnalysisCard?: (id: string) => void;
+  onEditAnalysisCard?: (id: string, newText: string) => void;
   onToggleActionItem?: (item: FeedbackItem) => void;
+  onEditManualItem?: (id: string, newText: string) => void;
+  onDeleteManualItem?: (id: string) => void;
   onOpenComposer: () => void;
 }) {
   const accent =
@@ -30,7 +42,12 @@ export function BoardColumn({
       ? 'text-rose-600 bg-rose-50'
       : 'text-blue-600 bg-blue-50';
 
-  const totalCount = generatedItems.length + manualItems.length;
+  // Accepted = visible as normal card; Rejected = hidden; Pending = show with Accept/Reject
+  const visibleGeneratedItems = generatedItems.filter(
+    (item) => (analysisCardStatus[item.id ?? item.text] ?? 'pending') !== 'rejected',
+  );
+
+  const totalCount = visibleGeneratedItems.length + manualItems.length;
 
   return (
     <section className="flex min-h-96 flex-col rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -46,35 +63,55 @@ export function BoardColumn({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-1 flex-col gap-3">
-        {generatedItems.map((item, idx) => (
-          <FeedbackCard
-            key={item.id ?? `${item.author}-${idx}-${item.text}`}
-            item={item}
-            checkable={type === 'actions'}
-            checked={completedActionItems.includes(item.id ?? item.text)}
-            onCheckedChange={() => onToggleActionItem?.(item)}
-          />
-        ))}
-        {manualItems.map((item, idx) => (
-          <FeedbackCard
-            key={item.id ?? `manual-${item.author}-${idx}-${item.text}`}
-            item={item}
-            checkable={type === 'actions'}
-            checked={completedActionItems.includes(item.id ?? item.text)}
-            onCheckedChange={() => onToggleActionItem?.(item)}
-          />
-        ))}
-      </div>
-
+      {/* Add new feedback at the TOP, below the header */}
       <Button
         onClick={onOpenComposer}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+        className="mt-3.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
       >
         <PlusIcon />
         Add new feedback
       </Button>
+
+      <div className="mt-3 flex flex-1 flex-col gap-3">
+        {/* AI-generated items */}
+        {visibleGeneratedItems.map((item, idx) => {
+          const itemId = item.id ?? `${item.author}-${idx}-${item.text}`;
+          const status = analysisCardStatus[itemId] ?? 'pending';
+          const isAccepted = status === 'accepted';
+
+          return (
+            <FeedbackCard
+              key={itemId}
+              item={item}
+              isAnalysis={!isAccepted}
+              status={status}
+              onAccept={() => onAcceptAnalysisCard?.(itemId)}
+              onReject={() => onRejectAnalysisCard?.(itemId)}
+              onEdit={(newText) => onEditAnalysisCard?.(itemId, newText)}
+              onDelete={() => onRejectAnalysisCard?.(itemId)} // deleting an AI card = reject it
+              checkable={type === 'actions' && isAccepted}
+              checked={completedActionItems.includes(itemId)}
+              onCheckedChange={() => onToggleActionItem?.(item)}
+            />
+          );
+        })}
+
+        {/* Manual items */}
+        {manualItems.map((item, idx) => {
+          const itemId = item.id ?? `manual-${item.author}-${idx}-${item.text}`;
+          return (
+            <FeedbackCard
+              key={itemId}
+              item={item}
+              checkable={type === 'actions'}
+              checked={completedActionItems.includes(itemId)}
+              onCheckedChange={() => onToggleActionItem?.(item)}
+              onEdit={(newText) => onEditManualItem?.(itemId, newText)}
+              onDelete={() => onDeleteManualItem?.(itemId)}
+            />
+          );
+        })}
+      </div>
     </section>
   );
 }
-

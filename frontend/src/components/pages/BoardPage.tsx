@@ -4,6 +4,7 @@ import { Button, Heading, Select } from '../common/UI';
 import { FaceIcon, SparkIcon, ThumbsUpIcon } from '../common/Icons';
 import { BoardColumn } from '../board/BoardColumn';
 import { FeedbackModal } from '../board/FeedbackModal';
+import type { AnalysisCardStatus } from '../board/FeedbackCard';
 
 interface BoardPageProps {
   sprints: string[];
@@ -14,7 +15,13 @@ interface BoardPageProps {
   isAnalyzing: boolean;
   manualItems: Record<ColumnKey, FeedbackItem[]>;
   completedActionItems: string[];
+  analysisCardStatus: Record<string, AnalysisCardStatus>;
+  onAcceptAnalysisCard: (id: string) => void;
+  onRejectAnalysisCard: (id: string) => void;
+  onEditAnalysisCard: (id: string, newText: string) => void;
   onAddManualItem: (column: ColumnKey, item: FeedbackItem) => void;
+  onEditManualItem: (column: ColumnKey, id: string, newText: string) => void;
+  onDeleteManualItem: (column: ColumnKey, id: string) => void;
   onToggleActionItem: (item: FeedbackItem) => void;
   error?: string | null;
 }
@@ -28,7 +35,13 @@ export function BoardPage({
   isAnalyzing,
   manualItems,
   completedActionItems,
+  analysisCardStatus,
+  onAcceptAnalysisCard,
+  onRejectAnalysisCard,
+  onEditAnalysisCard,
   onAddManualItem,
+  onEditManualItem,
+  onDeleteManualItem,
   onToggleActionItem,
   error,
 }: BoardPageProps) {
@@ -40,7 +53,7 @@ export function BoardPage({
     if (!analyzed || !analysis) return [];
     return analysis.wentWell.map((insight) => ({
       id: insight.id,
-      text: `${insight.title}: ${insight.description}`,
+      text: insight.title ? `${insight.title}: ${insight.description}` : insight.description,
       author: 'RetroVoice',
     }));
   }, [analyzed, analysis]);
@@ -49,7 +62,7 @@ export function BoardPage({
     if (!analyzed || !analysis) return [];
     return analysis.didntGoWell.map((insight) => ({
       id: insight.id,
-      text: `${insight.title}: ${insight.description}`,
+      text: insight.title ? `${insight.title}: ${insight.description}` : insight.description,
       author: 'RetroVoice',
     }));
   }, [analyzed, analysis]);
@@ -64,9 +77,7 @@ export function BoardPage({
             <span className="text-sm font-semibold text-slate-700">Choose existing sprint</span>
             <Select
               value={selectedSprint}
-              onChange={(event) => {
-                onSelectSprint(event.target.value);
-              }}
+              onChange={(event) => onSelectSprint(event.target.value)}
               className="mt-2"
             >
               {sprints.length > 0 ? (
@@ -115,7 +126,7 @@ export function BoardPage({
             <p className="text-sm font-semibold text-blue-950">RetroVoice analysis complete</p>
             <p className="mt-1 text-sm leading-6 text-blue-800">
               RetroVoice analyzed the sprint transcripts and added {totalInsights} insight
-              {totalInsights === 1 ? '' : 's'} to your board.
+              {totalInsights === 1 ? '' : 's'} to your board. Accept or reject each insight below.
             </p>
           </div>
         </aside>
@@ -128,14 +139,26 @@ export function BoardPage({
           icon={<FaceIcon mood="happy" />}
           generatedItems={generatedWellItems}
           manualItems={manualItems.well}
+          analysisCardStatus={analysisCardStatus}
+          onAcceptAnalysisCard={onAcceptAnalysisCard}
+          onRejectAnalysisCard={onRejectAnalysisCard}
+          onEditAnalysisCard={onEditAnalysisCard}
+          onEditManualItem={(id, text) => onEditManualItem('well', id, text)}
+          onDeleteManualItem={(id) => onDeleteManualItem('well', id)}
           onOpenComposer={() => setOpenComposer('well')}
         />
         <BoardColumn
           type="improve"
-          title="What Didn’t Go Well"
+          title="What Didn't Go Well"
           icon={<FaceIcon mood="sad" />}
           generatedItems={generatedImproveItems}
           manualItems={manualItems.improve}
+          analysisCardStatus={analysisCardStatus}
+          onAcceptAnalysisCard={onAcceptAnalysisCard}
+          onRejectAnalysisCard={onRejectAnalysisCard}
+          onEditAnalysisCard={onEditAnalysisCard}
+          onEditManualItem={(id, text) => onEditManualItem('improve', id, text)}
+          onDeleteManualItem={(id) => onDeleteManualItem('improve', id)}
           onOpenComposer={() => setOpenComposer('improve')}
         />
         <BoardColumn
@@ -146,6 +169,8 @@ export function BoardPage({
           manualItems={manualItems.actions}
           completedActionItems={completedActionItems}
           onToggleActionItem={onToggleActionItem}
+          onEditManualItem={(id, text) => onEditManualItem('actions', id, text)}
+          onDeleteManualItem={(id) => onDeleteManualItem('actions', id)}
           onOpenComposer={() => setOpenComposer('actions')}
         />
       </section>

@@ -51,10 +51,10 @@ export function Logo({ onClick }: { onClick: () => void }) {
   return (
     <Button
       onClick={onClick}
-      className="group flex items-center rounded-lg px-2 py-1.5 text-slate-900"
+      className="group flex items-center rounded-lg px-1.5 py-1 text-slate-900"
       aria-label="RetroVoice home"
     >
-      <img src="/retrovoice-logo.svg" alt="RetroVoice" className="h-10 w-auto" />
+      <img src="/logo.png" alt="RetroVoice" className="h-9 w-auto object-contain transition-transform group-hover:scale-105" />
     </Button>
   );
 }

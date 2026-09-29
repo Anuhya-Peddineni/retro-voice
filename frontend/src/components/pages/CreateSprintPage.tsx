@@ -1,64 +1,140 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, useEffect, type ChangeEvent } from 'react';
 import type { TranscriptSource } from '../../types/api';
-import { Button, Heading, Select, TextInput } from '../common/UI';
-import { ArchiveIcon, UploadIcon } from '../common/Icons';
+import { Button, Heading, TextInput } from '../common/UI';
+import { ArchiveIcon, UploadIcon, CheckCircleIcon, AlertCircleIcon } from '../common/Icons';
 import { normalizeSprintName, validateSelectedFiles, validateSprintNameInput } from '../../lib/validation';
+import { fetchSprintTranscripts } from '../../lib/api';
+import { useToast } from '../common/Toast';
 
 interface CreateSprintPageProps {
-  existingSprints: string[];
   onCreated: (sprintName: string) => void;
   onUploadAndCreate: (sprintName: string, files: File[]) => Promise<void>;
   submitting: boolean;
 }
 
+type ExistingCheckState = 'idle' | 'checking' | 'found' | 'notfound' | 'error';
+
 export function CreateSprintPage({
-  existingSprints,
   onCreated,
   onUploadAndCreate,
   submitting,
 }: CreateSprintPageProps) {
+  const { showToast } = useToast();
   const [name, setName] = useState('');
-  const [selectedExistingSprint, setSelectedExistingSprint] = useState(existingSprints[0] || '');
   const [source, setSource] = useState<TranscriptSource | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [existingCheckState, setExistingCheckState] = useState<ExistingCheckState>('idle');
+  const [foundCount, setFoundCount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // When source=existing and name changes, debounce-check transcript existence
+  useEffect(() => {
+    if (source !== 'existing') return;
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    let isCurrentCheck = true;
+
+    const trimmed = name.trim();
+    if (!trimmed || validateSprintNameInput(trimmed)) {
+      setExistingCheckState('idle');
+      setFoundCount(0);
+      return;
+    }
+
+    setExistingCheckState('checking');
+    const normalized = normalizeSprintName(trimmed);
+
+    checkTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await fetchSprintTranscripts(normalized);
+        if (!isCurrentCheck) return;
+        if (result && result.files && result.files.length > 0) {
+          setFoundCount(result.files.length);
+          setExistingCheckState('found');
+        } else {
+          setFoundCount(0);
+          setExistingCheckState('notfound');
+        }
+      } catch {
+        if (!isCurrentCheck) return;
+        setFoundCount(0);
+        setExistingCheckState('notfound');
+      }
+    }, 700);
+
+    return () => {
+      isCurrentCheck = false;
+      if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    };
+  }, [name, source]);
 
   const handleSubmit = async () => {
-    setErrorMessage(null);
+    if (!name.trim()) {
+      showToast('Please enter a sprint name.', 'error');
+      return;
+    }
+
+    if (!source) {
+      showToast(
+        'Please select a transcript source: "Pull Existing Sprint Transcripts" or "Upload Your Own Transcripts".',
+        'error',
+      );
+      return;
+    }
+
+    const nameError = validateSprintNameInput(name);
+    if (nameError) {
+      showToast(nameError, 'error');
+      return;
+    }
+
+    const normalized = normalizeSprintName(name);
 
     if (source === 'existing') {
-      const targetSprint = name.trim() || selectedExistingSprint;
-      if (!targetSprint) {
-        setErrorMessage('Please select or specify a sprint.');
+      if (existingCheckState === 'checking') {
+        showToast('Still checking for transcripts, please wait…', 'info');
         return;
       }
-      onCreated(targetSprint);
+      if (existingCheckState === 'notfound' || existingCheckState === 'error') {
+        showToast(
+          `No transcripts found for sprint "${name.trim()}". Please upload transcripts first.`,
+          'error',
+        );
+        return;
+      }
+      if (existingCheckState !== 'found') {
+        showToast('Please wait while we check for existing transcripts.', 'info');
+        return;
+      }
+      onCreated(normalized);
       return;
     }
 
     if (source === 'upload') {
-      const nameError = validateSprintNameInput(name);
-      if (nameError) {
-        setErrorMessage(nameError);
+      if (files.length === 0) {
+        showToast('Please select at least one transcript file (.txt or .vtt) to upload.', 'error');
         return;
       }
 
       const fileError = validateSelectedFiles(files);
       if (fileError) {
-        setErrorMessage(fileError);
+        showToast(fileError, 'error');
         return;
       }
 
+      setIsSubmitting(true);
       try {
-        const normalized = normalizeSprintName(name);
         await onUploadAndCreate(normalized, files);
         onCreated(normalized);
       } catch (err: unknown) {
-        const msg = err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
-          ? err.message
-          : 'Failed to create sprint with transcripts.';
-        setErrorMessage(msg);
+        const msg =
+          err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+            ? err.message
+            : 'Failed to upload transcripts and create sprint.';
+        showToast(msg, 'error');
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -66,6 +142,12 @@ export function CreateSprintPage({
   const openFilePicker = () => {
     setSource('upload');
     fileInputRef.current?.click();
+  };
+
+  const handleSelectExisting = () => {
+    setSource('existing');
+    setExistingCheckState('idle');
+    setFoundCount(0);
   };
 
   return (
@@ -87,9 +169,12 @@ export function CreateSprintPage({
             value={name}
             onChange={(event) => {
               setName(event.target.value);
-              if (errorMessage) setErrorMessage(null);
+              if (source === 'existing') {
+                setExistingCheckState('idle');
+                setFoundCount(0);
+              }
             }}
-            placeholder="e.g. Mobile checkout — Sprint 24"
+            placeholder="e.g. sprint-24"
             className="mt-2"
           />
         </label>
@@ -98,13 +183,7 @@ export function CreateSprintPage({
           <legend className="text-sm font-semibold text-slate-800">Choose transcript source</legend>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <Button
-              onClick={() => {
-                setSource('existing');
-                setErrorMessage(null);
-                if (!name && selectedExistingSprint) {
-                  setName(selectedExistingSprint);
-                }
-              }}
+              onClick={handleSelectExisting}
               aria-pressed={source === 'existing'}
               className={`rounded-xl border p-5 text-left ${
                 source === 'existing'
@@ -123,15 +202,12 @@ export function CreateSprintPage({
                 Pull Existing Sprint Transcripts
               </span>
               <span className="mt-1.5 block text-sm font-normal leading-5 text-slate-600">
-                Choose transcripts already available to your workspace.
+                Pull transcripts already stored for this sprint name.
               </span>
             </Button>
 
             <Button
-              onClick={() => {
-                setErrorMessage(null);
-                openFilePicker();
-              }}
+              onClick={openFilePicker}
               aria-pressed={source === 'upload'}
               className={`rounded-xl border p-5 text-left ${
                 source === 'upload'
@@ -150,7 +226,7 @@ export function CreateSprintPage({
                 Upload Your Own Transcripts
               </span>
               <span className="mt-1.5 block text-sm font-normal leading-5 text-slate-600">
-                Select multiple transcript files from your device.
+                Select multiple transcript files (.txt or .vtt) from your device.
               </span>
             </Button>
           </div>
@@ -165,36 +241,53 @@ export function CreateSprintPage({
               setSource('upload');
               const selected = Array.from(event.target.files ?? []);
               setFiles((current) => [...current, ...selected]);
-              setErrorMessage(null);
               event.currentTarget.value = '';
             }}
           />
         </fieldset>
 
-        {source === 'existing' && existingSprints.length > 0 && (
-          <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50/60 p-4">
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wider text-blue-900">
-                Available Sprints in Workspace
-              </span>
-              <Select
-                value={selectedExistingSprint}
-                onChange={(e) => {
-                  setSelectedExistingSprint(e.target.value);
-                  setName(e.target.value);
-                }}
-                className="mt-2"
-              >
-                {existingSprints.map((sprint) => (
-                  <option key={sprint} value={sprint}>
-                    {sprint}
-                  </option>
-                ))}
-              </Select>
-            </label>
+        {/* Existing sprint inline status banner */}
+        {source === 'existing' && (
+          <div className="mt-4">
+            {existingCheckState === 'checking' && (
+              <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <svg className="size-4 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Checking for transcripts in &quot;{normalizeSprintName(name)}&quot;…
+              </div>
+            )}
+            {existingCheckState === 'found' && (
+              <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                <CheckCircleIcon className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="font-semibold">
+                    Found {foundCount} transcript{foundCount === 1 ? '' : 's'} for &quot;{normalizeSprintName(name)}&quot;
+                  </p>
+                  <p className="mt-0.5 text-emerald-700">
+                    Click &quot;Create Sprint&quot; to open this sprint on the board.
+                  </p>
+                </div>
+              </div>
+            )}
+            {(existingCheckState === 'notfound' || existingCheckState === 'error') && name.trim().length >= 3 && !validateSprintNameInput(name) && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <AlertCircleIcon className="mt-0.5 size-5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="font-semibold">
+                    No transcripts found for &quot;{normalizeSprintName(name)}&quot;
+                  </p>
+                  <p className="mt-0.5 text-amber-700">
+                    Please upload transcripts for this sprint first, or choose &quot;Upload Your Own Transcripts&quot;.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
+        {/* Upload status panel */}
         {source === 'upload' && (
           <div className="mt-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
             <div className="flex items-center justify-between gap-3">
@@ -204,10 +297,7 @@ export function CreateSprintPage({
                   : 'Choose transcript files (.txt or .vtt)'}
               </p>
               <Button
-                onClick={() => {
-                  setErrorMessage(null);
-                  openFilePicker();
-                }}
+                onClick={openFilePicker}
                 className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
               >
                 <UploadIcon />
@@ -217,10 +307,13 @@ export function CreateSprintPage({
             {files.length > 0 && (
               <ul className="mt-3 divide-y divide-indigo-200/70 border-t border-indigo-200/70">
                 {files.map((file, index) => (
-                  <li key={`${file.name}-${file.lastModified}-${index}`} className="flex min-w-0 items-center gap-3 py-2">
+                  <li
+                    key={`${file.name}-${file.lastModified}-${index}`}
+                    className="flex min-w-0 items-center gap-3 py-2"
+                  >
                     <span className="min-w-0 flex-1 truncate text-indigo-950">{file.name}</span>
                     <Button
-                      onClick={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+                      onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
                       aria-label={`Remove ${file.name}`}
                       className="flex size-7 shrink-0 items-center justify-center rounded-md text-lg leading-none text-indigo-700 hover:bg-indigo-100"
                     >
@@ -233,27 +326,20 @@ export function CreateSprintPage({
           </div>
         )}
 
-        {errorMessage && (
-          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            {errorMessage}
-          </div>
-        )}
-
-        {source && (
-          <div className="mt-8 flex justify-end border-t border-slate-200 pt-6">
-            <Button
-              onClick={() => void handleSubmit()}
-              disabled={
-                submitting ||
-                (source === 'upload' && files.length === 0) ||
-                (source === 'existing' && !name.trim() && !selectedExistingSprint)
-              }
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-blue-700"
-            >
-              {submitting ? 'Creating Sprint…' : 'Create Sprint'}
-            </Button>
-          </div>
-        )}
+        {/* Create Sprint button — always visible at bottom */}
+        <div className="mt-8 flex justify-end border-t border-slate-200 pt-6">
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={submitting || isSubmitting || existingCheckState === 'checking'}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-blue-700"
+          >
+            {submitting || isSubmitting
+              ? 'Creating Sprint…'
+              : existingCheckState === 'checking'
+              ? 'Checking…'
+              : 'Create Sprint'}
+          </Button>
+        </div>
       </section>
     </main>
   );
