@@ -4,15 +4,15 @@ export function HelpPage() {
   const topics = [
     {
       title: 'Create your first sprint',
-      description: 'Name your sprint and choose existing transcripts or upload multiple files.',
+      description: 'Enter a sprint name (e.g., sprint-44), then either pull transcripts already stored for that sprint or upload new ones (up to 10 files, .txt or .vtt format, 2MB each).',
     },
     {
       title: 'Analyze a retrospective',
-      description: 'Open the board and select Analyze Sprint to surface themes from your transcripts.',
+      description: 'Select a sprint on the board and click Analyze Sprint. RetroVoice reads your transcripts and extracts insights into "What Went Well" and "What Didn\'t Go Well." Review each insight and accept or reject it.',
     },
     {
       title: 'Add team feedback',
-      description: 'Use Add new feedback in any column, enter your feedback and name, then save.',
+      description: 'Team can use "Add new feedback" in any column to manually add observations. The team\'s action items go in the "Action Items" column—you can mark them complete as you finish them.',
     },
   ];
 
