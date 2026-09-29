@@ -20,18 +20,18 @@ export function ContactPage() {
         <ul className="mt-5 space-y-3">
           <li>
             <a
-              href="mailto:ananyapeddineninaidu@gmail.com"
-              className="text-sm font-medium text-blue-700 underline decoration-blue-200 underline-offset-4 hover:text-blue-900"
-            >
-              ananyapeddineninaidu@gmail.com
-            </a>
-          </li>
-          <li>
-            <a
               href="mailto:anuhyapeddineni@gmail.com"
               className="text-sm font-medium text-blue-700 underline decoration-blue-200 underline-offset-4 hover:text-blue-900"
             >
               anuhyapeddineni@gmail.com
+            </a>
+          </li>
+          <li>
+            <a
+              href="mailto:ananyapeddineninaidu@gmail.com"
+              className="text-sm font-medium text-blue-700 underline decoration-blue-200 underline-offset-4 hover:text-blue-900"
+            >
+              ananyapeddineninaidu@gmail.com
             </a>
           </li>
         </ul>
