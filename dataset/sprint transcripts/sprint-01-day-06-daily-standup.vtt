@@ -1,0 +1,68 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 06 of 10 | 2026-04-13 | Focus: Address validation
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 06 of the sprint. Mira’s leave is extended, and support hasn’t assigned a replacement yet. The address response contract is ready, but there’s no verified sandbox response.
+
+00:01:10.000 --> 00:01:59.000
+<v Robert Taylor>I followed the generic support path. It created a ticket, but the team queue is only monitored during their business hours. We don’t have an escalation contact.
+
+00:02:12.000 --> 00:03:01.000
+<v Alex Smith>Can we ship the manual correction flow and keep automatic validation off?
+
+00:03:14.000 --> 00:04:03.000
+<v John Doe>Yes, if we still check basic syntax and tell customers the service is unavailable. But the story currently says validation is required.
+
+00:04:01.000 --> 00:04:57.000
+<v Sarah Miller>I need that changed in the acceptance criteria. I have one test saying block on validation failure and another saying allow with a notice.
+
+00:05:18.000 --> 00:06:07.000
+<v John Doe>I’ll update it now: attempt validation; if the vendor is unavailable, allow continuation with a notice. Invalid address remains blocked.
+
+00:06:20.000 --> 00:07:09.000
+<v Michael Brown>I’ve added `validation_unavailable` to the address response. I also made the threshold a required config value so deploy fails if it’s missing.
+
+00:07:22.000 --> 00:08:11.000
+<v Robert Taylor>That catches missing config, but I can’t edit the production secret. The backup owner can view it, not change it.
+
+00:08:24.000 --> 00:09:13.000
+<v Jane Doe>Can the platform on-call grant a temporary role?
+
+00:09:26.000 --> 00:10:15.000
+<v Robert Taylor>I asked. It’s waiting on security review. Test config is set; production is the gap.
+
+00:10:13.000 --> 00:11:09.000
+<v David Wilson>Frontend is ready against the address response contract. I can show the entered address and suggestion side by side. The PR has been waiting since yesterday.
+
+00:11:30.000 --> 00:12:19.000
+<v Alex Smith>I saw it late. I had the cart release review and then the payment incident. Emily, can you take the field mapping review? I’ll keep the security behavior.
+
+00:12:32.000 --> 00:13:21.000
+<v Emily Davis>I can review mapping, but I haven’t checked screen reader behavior.
+
+00:13:34.000 --> 00:14:23.000
+<v Sarah Miller>I checked keyboard navigation only. I can do screen reader after the next build, not before noon.
+
+00:14:36.000 --> 00:15:25.000
+<v Jane Doe>Split it: Emily on mapping now, Sarah on screen reader tomorrow. We’re not going to pretend both are done.
+
+00:15:38.000 --> 00:16:27.000
+<v Michael Brown>The old sample schema in our folder has the wrong confidence type. I corrected the note, but there’s still no real vendor response to verify against.
+
+00:16:25.000 --> 00:17:21.000
+<v Alex Smith>Let’s keep that uncertainty in the release notes. We can’t imply we verified their current schema.
+
+00:17:42.000 --> 00:18:31.000
+<v John Doe>I don’t want the release blocked on a vendor sandbox if the manual path works. Leave automatic suggestions disabled until the vendor response is verified.
+
+00:18:44.000 --> 00:19:33.000
+<v Robert Taylor>I’ll add an alternate-contact section to the runbook. I can’t put a name there yet, but I’ll include the support queue and ticket number.
+
+00:19:46.000 --> 00:20:35.000
+<v Sarah Miller>I can finish fallback and invalid-address cases. I’ll leave the vendor-confidence tests marked pending; the suite should make that visible.
+
+00:20:33.000 --> 00:21:29.000
+<v Jane Doe>Good. We fixed the requirement conflict, but production config access is still unresolved. Robert, keep following it; Alex, confirm automatic suggestions remain disabled before release.

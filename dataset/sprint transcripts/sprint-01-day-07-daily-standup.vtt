@@ -1,0 +1,71 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 07 of 10 | 2026-04-14 | Focus: Promotions and coupons
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 07 of the sprint. Address fallback is behind a flag. Now coupons. There’s a new request to stack loyalty points, but I don’t think it’s approved.
+
+00:01:10.000 --> 00:01:59.000
+<v John Doe>It isn’t. The approved rule is coupon against merchandise subtotal before shipping. The points request is still with finance.
+
+00:02:12.000 --> 00:03:01.000
+<v Michael Brown>The story says coupon and points stack. I started the combined calculation yesterday.
+
+00:03:14.000 --> 00:04:03.000
+<v John Doe>Then that story is wrong. I’ll fix it before standup ends.
+
+00:04:01.000 --> 00:04:57.000
+<v David Wilson>I’m blocked on error messaging. Invalid code and ineligible code should read differently, yes?
+
+00:05:18.000 --> 00:06:07.000
+<v John Doe>Yes. Invalid is “not recognized”; ineligible explains it can’t apply to these items. If the cart changes, recalculate.
+
+00:06:20.000 --> 00:07:09.000
+<v Sarah Miller>I need test examples for a cart change. Does it remove the coupon automatically if the new subtotal is too low?
+
+00:07:22.000 --> 00:08:11.000
+<v John Doe>Yes. I hadn’t thought through that part. Good catch.
+
+00:08:24.000 --> 00:09:13.000
+<v Alex Smith>Let’s do a short contract check today, with QA this time. We keep agreeing on backend fields without the test behavior.
+
+00:09:26.000 --> 00:10:15.000
+<v Jane Doe>I’ll schedule it and check calendars before moving it. David, I’ll make sure you can join.
+
+00:10:13.000 --> 00:11:09.000
+<v Emily Davis>I’m still carrying the address screen reader pass and catalog query measurements. I can take coupon performance tomorrow, not today.
+
+00:11:30.000 --> 00:12:19.000
+<v Jane Doe>That’s fine. Michael, can you run the first query measurement?
+
+00:12:32.000 --> 00:13:21.000
+<v Michael Brown>Yes, but I don’t have permission to read the staging promotion rules table. The access ticket was approved for dev only.
+
+00:13:34.000 --> 00:14:23.000
+<v Robert Taylor>The form just says “promotion database.” I’ll amend it with environment and table scope. I thought approval covered both.
+
+00:14:36.000 --> 00:15:25.000
+<v David Wilson>API draft says `discount`, the frontend page says `discountAmount`. Which is canonical?
+
+00:15:38.000 --> 00:16:27.000
+<v Michael Brown>`discountAmount`. I used the shorter name from the mock. Sorry, I should have checked the current page.
+
+00:16:25.000 --> 00:17:21.000
+<v Alex Smith>I’ll update the contract and tag frontend, backend, QA. The channel note alone isn’t enough; it got buried last time.
+
+00:17:42.000 --> 00:18:31.000
+<v Sarah Miller>I can write the coupon tests now. I’ll wait on the exact recalculation rule before marking the cart-change case.
+
+00:18:44.000 --> 00:19:33.000
+<v John Doe>Confirmed: recalculate, remove if it’s no longer eligible, and explain why. I’ll put that in the story.
+
+00:19:46.000 --> 00:20:35.000
+<v Jane Doe>The requirements are moving, but we caught this before the integrated build. Let’s freeze coupon behavior after the walkthrough unless there’s a customer-impacting gap.
+
+00:20:33.000 --> 00:21:29.000
+<v Robert Taylor>I’ve amended the access request. It needs the data owner to approve the staging table. I’ll follow it up this morning.
+
+00:21:50.000 --> 00:22:39.000
+<v Jane Doe>Thanks. Sarah writes the cases; Michael covers the coupon cases in the test suite until access arrives; Emily stays on address; I’ll get the walkthrough on calendars.

@@ -1,0 +1,71 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 05 of 10 | 2026-04-10 | Focus: Address validation
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 05 of the sprint. The cart merge is close. Today we’re adding address validation at checkout. Vendor sandbox access was expected yesterday; Robert?
+
+00:01:10.000 --> 00:01:59.000
+<v Robert Taylor>The account is made, but it doesn’t have the sandbox role. Approval went to Mira, our only named technical contact.
+
+00:02:12.000 --> 00:03:01.000
+<v Alex Smith>Is there a support queue or backup?
+
+00:03:14.000 --> 00:04:03.000
+<v Robert Taylor>There’s a generic support form. The runbook says email Mira. No alternate name or response time.
+
+00:04:01.000 --> 00:04:57.000
+<v John Doe>Address rule changed too. Unit number stays optional; postal code is required only in countries that use one. I’ll put the country examples in the story.
+
+00:05:18.000 --> 00:06:07.000
+<v Michael Brown>I made postal code required everywhere because that’s what the first note said. I’ll move the rule behind the country config.
+
+00:06:20.000 --> 00:07:09.000
+<v David Wilson>I need the response contract before I can map errors to fields. The sample has one message string; that won’t work for the form.
+
+00:07:22.000 --> 00:08:11.000
+<v Alex Smith>Let’s define our address response contract with field codes, normalized address, and a separate unavailable status.
+
+00:08:24.000 --> 00:09:13.000
+<v Michael Brown>I can build to that. I don’t want to guess the vendor confidence threshold, though.
+
+00:09:26.000 --> 00:10:15.000
+<v Sarah Miller>I can test the address error handling, but I can’t call the sandbox until the role comes through.
+
+00:10:13.000 --> 00:11:09.000
+<v Emily Davis>The sample in the shared folder says confidence is decimal. The API draft says boolean. That draft came from an old integration, I think.
+
+00:11:30.000 --> 00:12:19.000
+<v Michael Brown>I copied it from the old note. I’ll correct our schema to decimal and confirm with the vendor before we use it.
+
+00:12:32.000 --> 00:13:21.000
+<v Jane Doe>We moved the walkthrough to avoid a conflict, and I didn’t check David’s calendar. He missed the first half. Sorry, that meant the field mapping wasn’t agreed with frontend.
+
+00:13:34.000 --> 00:14:23.000
+<v David Wilson>I saw the notes later. I can join a repeat, but I have cart bug triage right after this.
+
+00:14:36.000 --> 00:15:25.000
+<v Jane Doe>I’ll schedule it after lunch and check calendars first. We can keep the address contract work moving.
+
+00:15:38.000 --> 00:16:27.000
+<v John Doe>If validation service is unavailable, let the customer continue with the address they entered and show a notice. Don’t silently change it.
+
+00:16:25.000 --> 00:17:21.000
+<v David Wilson>That’s important. I’ll show the normalized suggestion separately, not replace their input.
+
+00:17:42.000 --> 00:18:31.000
+<v Sarah Miller>I’m also assigned cart regression and checkout smoke today. I can do the address error cases, but I can’t do all three end-to-end.
+
+00:18:44.000 --> 00:19:33.000
+<v Jane Doe>Which can move without risking the release?
+
+00:19:46.000 --> 00:20:35.000
+<v Sarah Miller>Cart can move one day if the merge fix is stable. I’d keep address while the rules are being clarified.
+
+00:20:33.000 --> 00:21:29.000
+<v Robert Taylor>Support says Mira is on emergency leave. They’ll try to find another engineer, but no ETA.
+
+00:21:50.000 --> 00:22:39.000
+<v Jane Doe>Okay, Robert owns the support follow-up. Michael can continue with the address contract; mark vendor behavior unverified. Sarah, test the address error cases, and I’ll free you from cart regression today.

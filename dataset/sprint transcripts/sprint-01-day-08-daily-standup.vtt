@@ -1,0 +1,71 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 08 of 10 | 2026-04-15 | Focus: Promotions and coupons
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 08 of the sprint. The promotion deploy failed in staging yesterday. Robert, can you walk through it?
+
+00:01:10.000 --> 00:01:59.000
+<v Robert Taylor>Service account can read the database, but not the eligibility view. The role request said “promotion data,” so the owner granted the base schema only.
+
+00:02:12.000 --> 00:03:01.000
+<v Michael Brown>I can’t reproduce it with my dev role. I can see the query works locally.
+
+00:03:14.000 --> 00:04:03.000
+<v Sarah Miller>My test slot moved to today. I can start with the coupon test cases, but that won’t catch the actual view permission.
+
+00:04:01.000 --> 00:04:57.000
+<v Robert Taylor>The owner is online. I sent the exact view name and select scope; waiting for approval.
+
+00:05:18.000 --> 00:06:07.000
+<v Alex Smith>Don’t ask for broad schema access. The exact view is enough.
+
+00:06:20.000 --> 00:07:09.000
+<v John Doe>Marketing asked to change the banner copy to “Save up to.” That’s wording only, not calculation. Can it wait until after the coupon tests?
+
+00:07:22.000 --> 00:08:11.000
+<v David Wilson>Please. I’m also fixing cart merge after a bug came back. I can’t pick up copy and the cart issue at the same time.
+
+00:08:24.000 --> 00:09:13.000
+<v John Doe>Understood. I’ll tell marketing it’s next release.
+
+00:09:26.000 --> 00:10:15.000
+<v Alex Smith>I have four reviews queued. Michael, can you review the query shape? I’ll take the service boundary after my payment review.
+
+00:10:13.000 --> 00:11:09.000
+<v Michael Brown>Yes, though I’m also waiting on staging access. I can review the code, not verify the deployed view.
+
+00:11:30.000 --> 00:12:19.000
+<v Sarah Miller>If access clears by eleven, I can keep the QA slot. If it comes after lunch, I’ll need to move the end-to-end run again.
+
+00:12:32.000 --> 00:13:21.000
+<v Jane Doe>Emily, can you take the cart regression so Sarah holds the coupon slot?
+
+00:13:34.000 --> 00:14:23.000
+<v Emily Davis>After the address check, yes. I have the screen reader pass due this morning. I can’t promise both by noon.
+
+00:14:36.000 --> 00:15:25.000
+<v Jane Doe>Then the address check first; I’ll move cart regression to tomorrow.
+
+00:15:38.000 --> 00:16:27.000
+<v Robert Taylor>Permission is approved. The pod cached the denied connection, so I need to restart it before the build is usable.
+
+00:16:25.000 --> 00:17:21.000
+<v Michael Brown>I can watch the logs with you. The API response is unchanged, right?
+
+00:17:42.000 --> 00:18:31.000
+<v Robert Taylor>Right. Just the view grant and restart.
+
+00:18:44.000 --> 00:19:33.000
+<v Sarah Miller>I’ll run the coupon test cases now and switch to staging after the restart. I’ll keep the two runs separate so we don’t confuse them.
+
+00:19:46.000 --> 00:20:35.000
+<v Alex Smith>The reviewer backup list helped for the query, but it doesn’t say who handles auth reviews when I’m away. We should assign that explicitly.
+
+00:20:33.000 --> 00:21:29.000
+<v Jane Doe>I’ll add a primary and backup per area. We tried a general reviewer rotation, but it didn’t cover the specialist checks.
+
+00:21:50.000 --> 00:22:39.000
+<v John Doe>No more changes to coupon rules today. I’ll keep the banner out of this release.

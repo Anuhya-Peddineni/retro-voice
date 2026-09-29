@@ -1,0 +1,68 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 04 of 10 | 2026-04-09 | Focus: Saved-cart merge
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 04 of the sprint. We did the walkthrough, and the line-level response is clearer. The inventory spec is available now, but the gateway scope wasn’t included. Emily?
+
+00:01:10.000 --> 00:01:59.000
+<v Emily Davis>I can read the spec but can’t call the endpoint. I get 403. The access ticket said inventory access, not which gateway or environment.
+
+00:02:12.000 --> 00:03:01.000
+<v Robert Taylor>The role is for dev, not test. I’ll request the test scope. I’ve started listing principal, environment, and action in the access notes.
+
+00:03:14.000 --> 00:04:03.000
+<v Michael Brown>I’ve got the merge ID and result endpoint. The frontend can fetch status. There’s a 409 if the same ID is submitted again.
+
+00:04:01.000 --> 00:04:57.000
+<v David Wilson>I’m getting a 409 when I retry after a timeout, but I don’t know whether the first request completed. Could the endpoint return the existing result for that ID?
+
+00:05:18.000 --> 00:06:07.000
+<v Michael Brown>That’s better. I treated it as a conflict, not an idempotent retry. I’ll change it to return the original result.
+
+00:06:20.000 --> 00:07:09.000
+<v Alex Smith>Good. Keep a separate conflict for a different payload using the same ID.
+
+00:07:22.000 --> 00:08:11.000
+<v Sarah Miller>I found a mismatch in the capped quantity. The response says merged quantity three, but the cart shows four after refresh.
+
+00:08:24.000 --> 00:09:13.000
+<v Michael Brown>I think the saved cart is being reloaded before the merge transaction commits. I’ll check. We didn’t see it in the earlier cart test because it only covered the single-session flow.
+
+00:09:26.000 --> 00:10:15.000
+<v David Wilson>That could be why the count flickers too. I can wait on the result endpoint before refreshing the page.
+
+00:10:13.000 --> 00:11:09.000
+<v Sarah Miller>Please don’t patch around it until Michael checks the server flow. I can hold the integrated test for an hour.
+
+00:11:30.000 --> 00:12:19.000
+<v Jane Doe>What does that do to your slot?
+
+00:12:32.000 --> 00:13:21.000
+<v Sarah Miller>If it’s ready by eleven, I can keep the slot. After that I lose it to the payment team.
+
+00:13:34.000 --> 00:14:23.000
+<v Robert Taylor>The scope request is approved, but the secret isn’t mounted in test. The service account needs a separate grant.
+
+00:14:36.000 --> 00:15:25.000
+<v Michael Brown>That’s new to me. I can run the query locally, but not the integrated path.
+
+00:15:38.000 --> 00:16:27.000
+<v Alex Smith>I have three PRs waiting and a release review at noon. I’ll take the API behavior; Emily can review the query once access works.
+
+00:16:25.000 --> 00:17:21.000
+<v Emily Davis>I can review it after lunch, but I can’t test the gateway today if the secret is still missing.
+
+00:17:42.000 --> 00:18:31.000
+<v John Doe>Product changed the delisted-item rule: preserve the item but make checkout unavailable. That’s the same display as out of stock, right?
+
+00:18:44.000 --> 00:19:33.000
+<v David Wilson>Mostly. I can show “unavailable,” but should the shopper still be able to remove it?
+
+00:19:46.000 --> 00:20:35.000
+<v John Doe>Yes. I’ll add that and stop changing the rule after this.
+
+00:20:33.000 --> 00:21:29.000
+<v Jane Doe>The walkthrough caught the duplicate line case, but we still didn’t check the test gateway permission. Robert, update the checklist and exact owner. Sarah, run the duplicate-cart cases while we wait.

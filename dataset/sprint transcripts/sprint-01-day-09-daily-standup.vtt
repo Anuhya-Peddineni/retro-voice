@@ -1,0 +1,71 @@
+WEBVTT
+
+NOTE
+Synthetic platform-neutral daily standup transcript
+Sprint 01 | Day 09 of 10 | 2026-04-16 | Focus: Payment authorization
+
+00:00:08.000 --> 00:00:57.000
+<v Jane Doe>Morning, folks. Day 09 of the sprint. We’re starting payment authorization. Provider contact Mira is on emergency leave, and support hasn’t given us a sandbox engineer yet.
+
+00:01:10.000 --> 00:01:59.000
+<v Robert Taylor>I found a backup contact in the portal. The runbook link was old, but the portal search got us to the current endpoint. No credentials yet.
+
+00:02:12.000 --> 00:03:01.000
+<v Alex Smith>Can we work against their published decline schema meanwhile?
+
+00:03:14.000 --> 00:04:03.000
+<v Michael Brown>Yes, for the adapter. It doesn’t explain whether soft declines can retry with the same idempotency key.
+
+00:04:01.000 --> 00:04:57.000
+<v John Doe>Only offer retry when the provider says it’s safe. No duplicate authorizations because we guessed.
+
+00:05:18.000 --> 00:06:07.000
+<v David Wilson>I need the response contract for the decline panel. The published examples only cover approved and declined; I can’t show “contact your bank” versus “try again.”
+
+00:06:20.000 --> 00:07:09.000
+<v Sarah Miller>I also need test credentials. I can test our response mapping with the approved and declined cases, but I can’t call the provider.
+
+00:07:22.000 --> 00:08:11.000
+<v Jane Doe>Let’s be precise in the board: internal response mapping tested, provider behavior not verified. Robert, ask the backup contact about retry semantics.
+
+00:08:24.000 --> 00:09:13.000
+<v Robert Taylor>I filed a support ticket. It’s assigned, no response time. The runbook has no escalation step if Mira is unavailable.
+
+00:09:26.000 --> 00:10:15.000
+<v Emily Davis>I can test our idempotency handling. I’ll make sure retries reuse the same key on our side.
+
+00:10:13.000 --> 00:11:09.000
+<v Alex Smith>Thanks. The key should be per checkout attempt, not per HTTP request.
+
+00:11:30.000 --> 00:12:19.000
+<v Michael Brown>My draft generates one per request. I’ll change that. Good catch.
+
+00:12:32.000 --> 00:13:21.000
+<v John Doe>Finance wants currency shown on the decline message. We already have it on the order, so it’s presentation, not a provider field.
+
+00:13:34.000 --> 00:14:23.000
+<v David Wilson>Okay, I’ll use the order currency. Is the decline copy final?
+
+00:14:36.000 --> 00:15:25.000
+<v John Doe>Not until we see the provider codes. Keep the decline copy generic for now.
+
+00:15:38.000 --> 00:16:27.000
+<v Alex Smith>Payment PR is waiting on my logging review. I’m also covering the inventory query. Could someone else review the UI copy?
+
+00:16:25.000 --> 00:17:21.000
+<v Emily Davis>I can look at field mapping after the idempotency tests, but I’m not free for a full visual review.
+
+00:17:42.000 --> 00:18:31.000
+<v David Wilson>That’s enough. I mainly need to know the codes map to the right state.
+
+00:18:44.000 --> 00:19:33.000
+<v Jane Doe>Let’s do that. Alex owns logging and security; Emily checks mapping when her test finishes. David, leave the payment flow disabled until the mapping is verified.
+
+00:19:46.000 --> 00:20:35.000
+<v Michael Brown>I’ll add a health check that reports missing credentials without printing the secret.
+
+00:20:33.000 --> 00:21:29.000
+<v Robert Taylor>I’ll update the runbook with the new portal link and escalation ticket. I’ll leave the backup name blank until support confirms it.
+
+00:21:50.000 --> 00:22:39.000
+<v Jane Doe>Fine. We’re not blocked on internal work, but external verification stays open. We’ll check the ticket tomorrow.
