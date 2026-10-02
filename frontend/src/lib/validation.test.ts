@@ -9,7 +9,7 @@ describe('frontend validation utilities', () => {
   });
 
   it('rejects invalid sprint names', () => {
-    expect(validateSprintNameInput('ab')).toContain('at least 3');
+    expect(validateSprintNameInput('ab')).toContain('at least 5');
     expect(validateSprintNameInput('my sprint')).toContain('letters, numbers');
   });
 

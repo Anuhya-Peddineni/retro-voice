@@ -1,5 +1,5 @@
 const SPRINT_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
-const MAX_SPRINT_NAME_LENGTH = 50;
+const MAX_SPRINT_NAME_LENGTH = 15;
 const MIN_SPRINT_NAME_LENGTH = 5;
 const MAX_FILE_SIZE = 2_097_152;
 const MAX_FILES = 10;
@@ -16,7 +16,7 @@ export function validateSprintNameInput(value: string): string | undefined {
    }
 
   if (trimmed.length > MAX_SPRINT_NAME_LENGTH) {
-    return 'Sprint name must be at most 50 characters.';
+    return 'Sprint name must be at most 15 characters.';
   }
 
   if (!SPRINT_NAME_REGEX.test(trimmed)) {
