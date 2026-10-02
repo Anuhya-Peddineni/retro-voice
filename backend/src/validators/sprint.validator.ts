@@ -4,7 +4,7 @@ const sprintNameSchema = z
    .string()
    .trim()
    .min(5, 'Sprint name must be at least 5 characters')
-   .max(50, 'Sprint name must be at most 50 characters')
+   .max(15, 'Sprint name must be at most 15 characters')
    .regex(/^[a-zA-Z0-9_-]+$/, 'Sprint name must contain only letters, numbers, hyphens, or underscores');
 
 export function validateSprintName(name: string): { valid: boolean; error?: string } {

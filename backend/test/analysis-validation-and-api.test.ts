@@ -124,7 +124,7 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
       const invalidNames = [
         'a',           // too short
         'ab',          // too short
-        'x'.repeat(51), // too long
+        'x'.repeat(16), // too long
         'my sprint',   // space
         'my@sprint',   // special char
         'my.sprint',   // dot
@@ -227,7 +227,7 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
     });
 
     it('handles very long sprint names (max length)', async () => {
-      const validLongName = 'a'.repeat(50); // Max is 50
+      const validLongName = 'a'.repeat(15); // Max is 15
       const response = await request(app).post(`/api/sprints/${validLongName}/transcripts`);
 
       expect(response.status).toBeDefined();
@@ -237,7 +237,7 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
     });
 
     it('rejects sprint names exceeding max length', async () => {
-      const tooLongName = 'a'.repeat(51); // Exceeds max of 50
+      const tooLongName = 'a'.repeat(16); // Exceeds max of 15
       const response = await request(app).post(`/api/sprints/${tooLongName}/transcripts`);
 
       expect(response.status).toBe(400);
