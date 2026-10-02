@@ -417,7 +417,7 @@ npm run build
 
 ## Deployment
 
-The backend runs on **Cloud Run** and the frontend on **Firebase Hosting**. For step-by-step instructions, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+The backend runs on **Cloud Run** and the frontend on **Firebase Hosting**. For step-by-step instructions, see [`DEPLOYMENT.md`](/DEPLOYMENT.md).
 
 ## How It Works
 
