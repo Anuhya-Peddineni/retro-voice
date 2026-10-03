@@ -98,7 +98,7 @@ export function CreateSprintPage({
       }
       if (existingCheckState === 'notfound' || existingCheckState === 'error') {
         showToast(
-          `No transcripts found for sprint "${name.trim()}". Please upload transcripts first.`,
+          'No meeting transcripts available for this sprint. Upload transcript files to get started.',
           'error',
         );
         return;
@@ -282,10 +282,10 @@ export function CreateSprintPage({
                 <AlertCircleIcon className="mt-0.5 size-5 shrink-0 text-amber-600" />
                 <div>
                   <p className="font-semibold">
-                    No transcripts found for &quot;{normalizeSprintName(name)}&quot;
+                    No meeting transcripts available for this sprint.
                   </p>
                   <p className="mt-0.5 text-amber-700">
-                    Please upload transcripts for this sprint first, or choose &quot;Upload Your Own Transcripts&quot;.
+                    Upload transcript files to get started.
                   </p>
                 </div>
               </div>
