@@ -157,8 +157,8 @@ The frontend will start at `http://localhost:5173`
 
 ### Sprint Board Data Persistence
 - `GET /api/sprints/:sprintName/board` - Retrieve saved sprint board data from Firestore
-    - Returns: `{ sprintName: string, analysis: RetroAnalysisResponse | null, manualItems: { well: [], improve: [], actions: [] }, completedActionItems: [], analysisCardStatus: {...}, metadata: { createdAt, lastAnalyzedAt, lastModifiedAt } }`
-    - Returns empty data if no board data exists for the sprint
+    - Returns: `{ exists: boolean, sprintName: string, analysis: RetroAnalysisResponse | null, manualItems: { well: [], improve: [], actions: [] }, completedActionItems: [], analysisCardStatus: {...}, metadata: { createdAt, lastAnalyzedAt?, lastModifiedAt } }`
+    - `exists` is `true` when a saved board document exists and `false` when the response contains empty board data
     - Called when user switches to a sprint to load previously saved data
 
 - `POST /api/sprints/:sprintName/board` - Save complete sprint board data to Firestore
