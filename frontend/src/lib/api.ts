@@ -78,3 +78,46 @@ export async function analyzeSprint(sprintName: string): Promise<RetroAnalysisRe
   });
 }
 
+export interface SprintBoardData {
+  sprintName: string;
+  analysis: RetroAnalysisResponse | null;
+  manualItems: Record<string, any>;
+  completedActionItems: string[];
+  analysisCardStatus: Record<string, string>;
+  metadata: {
+    lastAnalyzedAt?: string;
+    lastModifiedAt: string;
+    createdAt: string;
+  };
+}
+
+export async function getBoardData(sprintName: string): Promise<SprintBoardData> {
+  return requestJson<SprintBoardData>(`/api/sprints/${encodeURIComponent(sprintName)}/board`);
+}
+
+export async function saveBoardData(sprintName: string, data: {
+  analysis: RetroAnalysisResponse | null;
+  manualItems: Record<string, any>;
+  completedActionItems: string[];
+  analysisCardStatus: Record<string, string>;
+}): Promise<{ success: boolean; sprintName: string }> {
+  return requestJson(`/api/sprints/${encodeURIComponent(sprintName)}/board`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBoardData(sprintName: string): Promise<{ success: boolean; sprintName: string }> {
+  return requestJson(`/api/sprints/${encodeURIComponent(sprintName)}/board`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateBoardData(sprintName: string, updates: Partial<SprintBoardData>): Promise<{ success: boolean; sprintName: string }> {
+  return requestJson(`/api/sprints/${encodeURIComponent(sprintName)}/board`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+}

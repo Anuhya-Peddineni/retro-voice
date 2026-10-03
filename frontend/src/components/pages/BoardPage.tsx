@@ -24,6 +24,10 @@ interface BoardPageProps {
   onDeleteManualItem: (column: ColumnKey, id: string) => void;
   onToggleActionItem: (item: FeedbackItem) => void;
   error?: string | null;
+  isLoadingBoardData?: boolean;
+  onSaveRetro?: () => Promise<void>;
+  onClearRetro?: () => Promise<void>;
+  isSaving?: boolean;
 }
 
 export function BoardPage({
@@ -44,6 +48,10 @@ export function BoardPage({
   onDeleteManualItem,
   onToggleActionItem,
   error,
+  isLoadingBoardData,
+  onSaveRetro,
+  onClearRetro,
+  isSaving,
 }: BoardPageProps) {
   const [openComposer, setOpenComposer] = useState<ColumnKey | null>(null);
 
@@ -106,6 +114,20 @@ export function BoardPage({
           <SparkIcon />
           {isAnalyzing ? 'Analyzing…' : analyzed ? 'Analyze Again' : 'Analyze Sprint'}
         </Button>
+        <Button
+          onClick={() => void onSaveRetro?.()}
+          disabled={isSaving || !selectedSprint || (!analysis && Object.keys(manualItems).length === 0)}
+          className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
+        >
+          {isSaving ? 'Saving…' : 'Save Retro'}
+        </Button>
+        <Button
+          onClick={() => void onClearRetro?.()}
+          disabled={!selectedSprint}
+          className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-rose-700 disabled:opacity-50"
+        >
+          Clear Board
+        </Button>
       </div>
 
       {error && (
@@ -113,6 +135,15 @@ export function BoardPage({
           <div>
             <p className="text-sm font-semibold text-rose-950">Analysis failed</p>
             <p className="mt-1 text-sm leading-6 text-rose-800">{error}</p>
+          </div>
+        </aside>
+      )}
+
+      {isLoadingBoardData && (
+        <aside className="mt-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div>
+            <p className="text-sm font-semibold text-blue-950">Loading sprint data…</p>
+            <p className="mt-1 text-sm leading-6 text-blue-800">Retrieving your retrospective board data from storage.</p>
           </div>
         </aside>
       )}
