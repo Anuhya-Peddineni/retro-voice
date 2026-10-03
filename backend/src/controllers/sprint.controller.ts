@@ -269,6 +269,7 @@ export class SprintController {
 
        if (!boardData) {
          res.json({
+           exists: false,
            sprintName: normalizedSprintName,
            analysis: null,
            manualItems: { well: [], improve: [], actions: [] },
@@ -282,7 +283,7 @@ export class SprintController {
          return;
        }
 
-       res.json(boardData as SprintBoardResponse);
+      res.json({ ...boardData, exists: true } as SprintBoardResponse);
      } catch (err) {
        const message = err instanceof Error ? err.message : 'Failed to retrieve board data';
        res.status(500).json({

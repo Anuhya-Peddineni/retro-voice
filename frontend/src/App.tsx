@@ -227,6 +227,7 @@ function AppContent() {
         {page === 'home' && <HomePage onNavigate={navigateTo} />}
         {page === 'create' && (
           <CreateSprintPage
+            existingSprints={sprints}
             onCreated={(sprint) => {
               setSelectedSprint(sprint);
               navigateTo('board');

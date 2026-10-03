@@ -3,18 +3,21 @@ import type { TranscriptSource } from '../../types/api';
 import { Button, Heading, TextInput } from '../common/UI';
 import { ArchiveIcon, UploadIcon, CheckCircleIcon, AlertCircleIcon } from '../common/Icons';
 import { normalizeSprintName, validateSelectedFiles, validateSprintNameInput } from '../../lib/validation';
-import { fetchSprintTranscripts } from '../../lib/api';
+import { fetchSprintTranscripts, getBoardData } from '../../lib/api';
 import { useToast } from '../common/Toast';
 
 interface CreateSprintPageProps {
+  existingSprints: string[];
   onCreated: (sprintName: string) => void;
   onUploadAndCreate: (sprintName: string, files: File[]) => Promise<void>;
   submitting: boolean;
 }
 
 type ExistingCheckState = 'idle' | 'checking' | 'found' | 'notfound' | 'error';
+type BoardCheckState = 'idle' | 'checking' | 'exists' | 'notfound' | 'error';
 
 export function CreateSprintPage({
+  existingSprints,
   onCreated,
   onUploadAndCreate,
   submitting,
@@ -24,6 +27,7 @@ export function CreateSprintPage({
   const [source, setSource] = useState<TranscriptSource | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [existingCheckState, setExistingCheckState] = useState<ExistingCheckState>('idle');
+  const [boardCheckState, setBoardCheckState] = useState<BoardCheckState>('idle');
   const [foundCount, setFoundCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,28 +42,34 @@ export function CreateSprintPage({
     const trimmed = name.trim();
     if (!trimmed || validateSprintNameInput(trimmed)) {
       setExistingCheckState('idle');
+      setBoardCheckState('idle');
       setFoundCount(0);
       return;
     }
 
     setExistingCheckState('checking');
+    setBoardCheckState('checking');
     const normalized = normalizeSprintName(trimmed);
 
     checkTimerRef.current = setTimeout(async () => {
-      try {
-        const result = await fetchSprintTranscripts(normalized);
-        if (!isCurrentCheck) return;
-        if (result && result.files && result.files.length > 0) {
-          setFoundCount(result.files.length);
-          setExistingCheckState('found');
-        } else {
-          setFoundCount(0);
-          setExistingCheckState('notfound');
-        }
-      } catch {
-        if (!isCurrentCheck) return;
+      const [transcriptsResult, boardResult] = await Promise.allSettled([
+        fetchSprintTranscripts(normalized),
+        getBoardData(normalized),
+      ]);
+      if (!isCurrentCheck) return;
+
+      if (transcriptsResult.status === 'fulfilled' && transcriptsResult.value.files.length > 0) {
+        setFoundCount(transcriptsResult.value.files.length);
+        setExistingCheckState('found');
+      } else {
         setFoundCount(0);
         setExistingCheckState('notfound');
+      }
+
+      if (boardResult.status === 'fulfilled') {
+        setBoardCheckState(boardResult.value.exists ? 'exists' : 'notfound');
+      } else {
+        setBoardCheckState('error');
       }
     }, 700);
 
@@ -91,7 +101,30 @@ export function CreateSprintPage({
 
     const normalized = normalizeSprintName(name);
 
+    if (
+      source === 'upload' &&
+      existingSprints.some((sprint) => normalizeSprintName(sprint) === normalized)
+    ) {
+      showToast(
+        `A sprint named "${normalized}" already exists. Choose a different name or pull its transcripts.`,
+        'error',
+      );
+      return;
+    }
+
     if (source === 'existing') {
+      if (boardCheckState === 'checking') {
+        showToast('Still checking whether this sprint already has a board.', 'info');
+        return;
+      }
+      if (boardCheckState === 'exists') {
+        showToast(`A board for "${normalized}" already exists.`, 'error');
+        return;
+      }
+      if (boardCheckState === 'error') {
+        showToast('Could not verify whether this sprint already has a board. Please try again.', 'error');
+        return;
+      }
       if (existingCheckState === 'checking') {
         showToast('Still checking for transcripts, please wait…', 'info');
         return;
@@ -255,15 +288,6 @@ export function CreateSprintPage({
         {/* Existing sprint inline status banner */}
         {source === 'existing' && (
           <div className="mt-4">
-            {existingCheckState === 'checking' && (
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                <svg className="size-4 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Checking for transcripts in &quot;{normalizeSprintName(name)}&quot;…
-              </div>
-            )}
             {existingCheckState === 'found' && (
               <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                 <CheckCircleIcon className="mt-0.5 size-5 shrink-0 text-emerald-600" />
@@ -336,14 +360,10 @@ export function CreateSprintPage({
         <div className="mt-8 flex justify-end border-t border-slate-200 pt-6">
           <Button
             onClick={() => void handleSubmit()}
-            disabled={submitting || isSubmitting || existingCheckState === 'checking'}
+            disabled={submitting || isSubmitting}
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-blue-700"
           >
-            {submitting || isSubmitting
-              ? 'Creating Sprint…'
-              : existingCheckState === 'checking'
-              ? 'Checking…'
-              : 'Create Sprint'}
+            {submitting || isSubmitting ? 'Creating Sprint…' : 'Create Sprint'}
           </Button>
         </div>
       </section>
