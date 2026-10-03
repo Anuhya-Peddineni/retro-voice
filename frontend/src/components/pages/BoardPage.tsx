@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ColumnKey, FeedbackItem, RetroAnalysisResponse } from '../../types/api';
 import { Button, Heading, Select } from '../common/UI';
-import { FaceIcon, SparkIcon, ThumbsUpIcon } from '../common/Icons';
+import { FaceIcon, SparkIcon, ThumbsUpIcon, XIcon } from '../common/Icons';
 import { BoardColumn } from '../board/BoardColumn';
 import { FeedbackModal } from '../board/FeedbackModal';
 import type { AnalysisCardStatus } from '../board/FeedbackCard';
@@ -46,6 +46,8 @@ interface BoardPageProps {
   onEditManualItem: (column: ColumnKey, id: string, newText: string) => void;
   onDeleteManualItem: (column: ColumnKey, id: string) => void;
   onToggleActionItem: (item: FeedbackItem) => void;
+  onSaveBoard: () => Promise<boolean>;
+  onClearBoard: () => Promise<boolean>;
   error?: string | null;
 }
 
@@ -64,11 +66,23 @@ export function BoardPage({
   onAddManualItem,
   onEditManualItem,
   onDeleteManualItem,
+  onSaveBoard,
+  onClearBoard,
   error,
 }: BoardPageProps) {
   const [openComposer, setOpenComposer] = useState<ColumnKey | null>(null);
+  const [dismissedAnalysisKeys, setDismissedAnalysisKeys] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem('retrovoice:dismissed-analysis') ?? '[]') as string[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const [confirmationAction, setConfirmationAction] = useState<'save' | 'clear' | null>(null);
+  const [isConfirmingAction, setIsConfirmingAction] = useState(false);
 
   const analyzed = Boolean(analysis && analysis.sprintName === selectedSprint);
+  const analysisGeneratedAt = analyzed && analysis ? analysis.summary.generatedAt : undefined;
 
   const generatedWellItems: FeedbackItem[] = useMemo(() => {
     if (!analyzed || !analysis) return [];
@@ -89,26 +103,32 @@ export function BoardPage({
   }, [analyzed, analysis]);
 
   const totalInsights = generatedWellItems.length + generatedImproveItems.length;
+  const analysisNoticeKey = `${selectedSprint}:${analysisGeneratedAt ?? ''}`;
+  const hasPendingInsights = [...generatedWellItems, ...generatedImproveItems].some(
+    (item) => (analysisCardStatus[item.id ?? item.text] ?? 'pending') === 'pending',
+  );
 
-  const handleSave = () => {
-    const data = JSON.stringify({ sprint: selectedSprint, manualItems, analysis }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `retro-${selectedSprint}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const dismissAnalysisNotice = () => {
+    setDismissedAnalysisKeys((previous) => {
+      const next = new Set(previous);
+      next.add(analysisNoticeKey);
+      try {
+        sessionStorage.setItem('retrovoice:dismissed-analysis', JSON.stringify([...next]));
+      } catch {
+        // Keep this dismissal for the mounted session if storage is unavailable.
+      }
+      return next;
+    });
   };
 
-  const handleClear = () => {
-    if (window.confirm('Clear all cards on this board? This cannot be undone.')) {
-      // Signal parent to wipe manual items for current sprint
-      (['well', 'improve', 'actions'] as ColumnKey[]).forEach((col) => {
-        manualItems[col].forEach((item) => {
-          if (item.id) onDeleteManualItem(col, item.id);
-        });
-      });
+  const handleConfirmAction = async () => {
+    if (!confirmationAction) return;
+    setIsConfirmingAction(true);
+    try {
+      const completed = confirmationAction === 'save' ? await onSaveBoard() : await onClearBoard();
+      if (completed) setConfirmationAction(null);
+    } finally {
+      setIsConfirmingAction(false);
     }
   };
 
@@ -153,7 +173,7 @@ export function BoardPage({
             {isAnalyzing ? 'Analyzing…' : 'Analyze Sprint'}
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => setConfirmationAction('save')}
             disabled={!selectedSprint}
             className="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50"
           >
@@ -161,7 +181,7 @@ export function BoardPage({
             Save Board
           </Button>
           <Button
-            onClick={handleClear}
+            onClick={() => setConfirmationAction('clear')}
             disabled={!selectedSprint}
             className="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 shadow-sm hover:bg-rose-50"
           >
@@ -180,8 +200,8 @@ export function BoardPage({
         </aside>
       )}
 
-      {analyzed && !error && (
-        <aside className="mt-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+      {analyzed && !error && hasPendingInsights && !dismissedAnalysisKeys.has(analysisNoticeKey) && (
+        <aside className="relative mt-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 pr-12">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
             <SparkIcon />
           </span>
@@ -192,6 +212,14 @@ export function BoardPage({
               {totalInsights === 1 ? '' : 's'} to your board. Accept or reject each insight below.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={dismissAnalysisNotice}
+            aria-label="Dismiss analysis complete message"
+            className="absolute right-3 top-3 rounded-md p-1.5 text-blue-700 hover:bg-blue-100"
+          >
+            <XIcon className="size-4" />
+          </button>
         </aside>
       )}
 
@@ -246,6 +274,72 @@ export function BoardPage({
           }}
           onClose={() => setOpenComposer(null)}
         />
+      )}
+
+      {confirmationAction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-5 backdrop-blur-sm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="board-confirmation-title"
+          aria-describedby="board-confirmation-description"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isConfirmingAction) setConfirmationAction(null);
+          }}
+        >
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <h2 id="board-confirmation-title" className="text-lg font-semibold text-slate-950">
+              {confirmationAction === 'save' ? 'Save this sprint?' : 'Clear this sprint?'}
+            </h2>
+            {confirmationAction === 'clear' ? (
+              <p id="board-confirmation-description" className="mt-2 text-sm leading-6 text-slate-600">
+                Do you want to clear the current retrospective for {selectedSprint}? This cannot be undone.
+              </p>
+            ) : (
+              <div id="board-confirmation-description" className="mt-4 flex items-start gap-2.5">
+                <button
+                  type="button"
+                  title="Cards added by RetroVoice without a decision will be excluded."
+                  aria-label="Cards added by RetroVoice without a decision will be excluded."
+                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-500"
+                >
+                  i
+                </button>
+                <p className="text-xs leading-5 text-slate-500">
+                  Do you want to save the current retrospective for {selectedSprint}?
+                  <br />
+                  <span className="text-[11px]">
+                  Cards added by RetroVoice without a decision will be excluded.
+                  </span>
+                </p>
+              </div>
+            )}
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                onClick={() => setConfirmationAction(null)}
+                disabled={isConfirmingAction}
+                className="rounded-lg px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleConfirmAction()}
+                disabled={isConfirmingAction}
+                className={`rounded-lg px-4 py-2.5 text-sm text-white ${
+                  confirmationAction === 'clear'
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isConfirmingAction
+                  ? 'Working…'
+                  : confirmationAction === 'save'
+                  ? 'Save board'
+                  : 'Clear board'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

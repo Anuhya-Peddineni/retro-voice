@@ -7,7 +7,14 @@ import { CreateSprintPage } from './components/pages/CreateSprintPage';
 import { BoardPage } from './components/pages/BoardPage';
 import { ContactPage } from './components/pages/ContactPage';
 import { HelpPage } from './components/pages/HelpPage';
-import { analyzeSprint, fetchSprints, uploadSprintTranscripts } from './lib/api';
+import {
+  analyzeSprint,
+  deleteBoardData,
+  fetchSprints,
+  getBoardData,
+  saveBoardData,
+  uploadSprintTranscripts,
+} from './lib/api';
 import { ToastProvider, useToast } from './components/common/Toast';
 import type { AnalysisCardStatus } from './components/board/FeedbackCard';
 
@@ -64,15 +71,57 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (page !== 'board' || !selectedSprint) return;
+    let isCurrentRequest = true;
+
+    void getBoardData(selectedSprint)
+      .then(async (board) => {
+        if (!isCurrentRequest) return;
+        if (board.exists === false) {
+          await saveBoardData(selectedSprint, {
+            analysis: null,
+            manualItems: { well: [], improve: [], actions: [] },
+            completedActionItems: [],
+            analysisCardStatus: {},
+          });
+          return;
+        }
+        if (board.exists !== true) return;
+        setAnalysis(board.analysis);
+        setSprintManualItems((previous) => ({
+          ...previous,
+          [selectedSprint]: {
+            well: board.manualItems.well ?? [],
+            improve: board.manualItems.improve ?? [],
+            actions: board.manualItems.actions ?? [],
+          },
+        }));
+        setCompletedActionItems((previous) => ({
+          ...previous,
+          [selectedSprint]: board.completedActionItems ?? [],
+        }));
+        setSprintAnalysisCardStatus((previous) => ({
+          ...previous,
+          [selectedSprint]: (board.analysisCardStatus ?? {}) as Record<string, AnalysisCardStatus>,
+        }));
+      })
+      .catch(() => {
+        if (isCurrentRequest) showToast(`Could not load or initialize the ${selectedSprint} board.`, 'error');
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [page, selectedSprint]);
+
   async function loadSprints(preferredSprint?: string) {
     try {
       const response = await fetchSprints();
       setSprints(response.sprints);
-      const fallback = preferredSprint ?? selectedSprint;
-      const nextSprint =
-        fallback && response.sprints.includes(fallback)
-          ? fallback
-          : response.sprints[0] || '';
+      const nextSprint = preferredSprint && response.sprints.includes(preferredSprint)
+        ? preferredSprint
+        : response.sprints[0] || '';
       setSelectedSprint(nextSprint);
     } catch {
       setSprints([]);
@@ -98,7 +147,6 @@ function AppContent() {
     try {
       const result = await analyzeSprint(sprintName);
       setAnalysis(result);
-      showToast(`Analysis complete for ${sprintName}!`, 'success');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
@@ -127,7 +175,7 @@ function AppContent() {
       ...prev,
       [selectedSprint]: { ...(prev[selectedSprint] || {}), [id]: 'rejected' },
     }));
-    showToast('Card removed from board.', 'info');
+    showToast('Insight removed from board.', 'info');
   }
 
   function handleEditAnalysisCard(id: string, newText: string) {
@@ -208,6 +256,66 @@ function AppContent() {
     });
   }
 
+  async function handleSaveBoard(): Promise<boolean> {
+    if (!selectedSprint) return false;
+    const sprintAnalysis = analysis?.sprintName === selectedSprint ? analysis : null;
+    const nextCardStatus = { ...(sprintAnalysisCardStatus[selectedSprint] ?? {}) };
+    const insights = [...(sprintAnalysis?.wentWell ?? []), ...(sprintAnalysis?.didntGoWell ?? [])];
+
+    for (const insight of insights) {
+      if (!nextCardStatus[insight.id] || nextCardStatus[insight.id] === 'pending') {
+        nextCardStatus[insight.id] = 'rejected';
+      }
+    }
+
+    try {
+      await saveBoardData(selectedSprint, {
+        analysis: sprintAnalysis,
+        manualItems: currentManualItems,
+        completedActionItems: completedActionItems[selectedSprint] ?? [],
+        analysisCardStatus: nextCardStatus,
+      });
+      setSprintAnalysisCardStatus((previous) => ({
+        ...previous,
+        [selectedSprint]: nextCardStatus,
+      }));
+      showToast('Board saved.', 'success');
+      return true;
+    } catch (err: unknown) {
+      showToast(
+        err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'Could not save this board.',
+        'error',
+      );
+      return false;
+    }
+  }
+
+  async function handleClearBoard(): Promise<boolean> {
+    if (!selectedSprint) return false;
+    try {
+      await deleteBoardData(selectedSprint);
+      setSprintManualItems((previous) => ({
+        ...previous,
+        [selectedSprint]: { well: [], improve: [], actions: [] },
+      }));
+      setCompletedActionItems((previous) => ({ ...previous, [selectedSprint]: [] }));
+      setSprintAnalysisCardStatus((previous) => ({ ...previous, [selectedSprint]: {} }));
+      setAnalysis((previous) => (previous?.sprintName === selectedSprint ? null : previous));
+      showToast('Board cleared.', 'success');
+      return true;
+    } catch (err: unknown) {
+      showToast(
+        err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'Could not clear this board.',
+        'error',
+      );
+      return false;
+    }
+  }
+
   const navigateTo = (next: Page) => {
     setPage(next);
   };
@@ -257,6 +365,8 @@ function AppContent() {
             onEditManualItem={handleEditManualItem}
             onDeleteManualItem={handleDeleteManualItem}
             onToggleActionItem={handleToggleActionItem}
+            onSaveBoard={handleSaveBoard}
+            onClearBoard={handleClearBoard}
             error={analysisError}
           />
         )}

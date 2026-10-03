@@ -220,7 +220,7 @@ export class SprintController {
          completedActionItems: body.completedActionItems,
          analysisCardStatus: body.analysisCardStatus as Record<string, 'pending' | 'accepted' | 'rejected'>,
          metadata: {
-           lastAnalyzedAt: body.analysis?.summary.generatedAt,
+           ...(body.analysis ? { lastAnalyzedAt: body.analysis.summary.generatedAt } : {}),
            lastModifiedAt: now,
            createdAt: now,
          },

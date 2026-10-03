@@ -12,7 +12,7 @@ export function HelpPage() {
     },
     {
       title: 'Add team feedback',
-      description: 'Team can use "Add new feedback" in any column to manually add observations. The team\'s action items go in the "Action Items" column—you can mark them complete as you finish them.',
+      description: 'Use "Add new feedback" in any column to capture observations or follow-up actions. Save the board to keep team feedback and action items in the Sprint Retrospective board.',
     },
   ];
 

@@ -69,6 +69,19 @@ export function BoardColumn({
       </Button>
 
       <div className="mt-3 flex flex-1 flex-col gap-3">
+        {/* Manual items */}
+        {manualItems.map((item, idx) => {
+          const itemId = item.id ?? `manual-${item.author}-${idx}-${item.text}`;
+          return (
+            <FeedbackCard
+              key={itemId}
+              item={item}
+              onEdit={(newText) => onEditManualItem?.(itemId, newText)}
+              onDelete={() => onDeleteManualItem?.(itemId)}
+            />
+          );
+        })}
+
         {/* AI-generated items */}
         {visibleGeneratedItems.map((item, idx) => {
           const itemId = item.id ?? `${item.author}-${idx}-${item.text}`;
@@ -85,19 +98,6 @@ export function BoardColumn({
               onReject={() => onRejectAnalysisCard?.(itemId)}
               onEdit={(newText) => onEditAnalysisCard?.(itemId, newText)}
               onDelete={() => onRejectAnalysisCard?.(itemId)}
-            />
-          );
-        })}
-
-        {/* Manual items */}
-        {manualItems.map((item, idx) => {
-          const itemId = item.id ?? `manual-${item.author}-${idx}-${item.text}`;
-          return (
-            <FeedbackCard
-              key={itemId}
-              item={item}
-              onEdit={(newText) => onEditManualItem?.(itemId, newText)}
-              onDelete={() => onDeleteManualItem?.(itemId)}
             />
           );
         })}

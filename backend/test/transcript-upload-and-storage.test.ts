@@ -51,6 +51,13 @@ describe('RetroVoice Backend - Phase 3', () => {
       expect(sprints).toContain('sprint1');
     });
 
+    it('lists the most recently created sprint first', async () => {
+      await service.uploadFiles('sprint-old', [{ filename: 'old.txt', buffer: Buffer.from('old') }]);
+      await service.uploadFiles('sprint-new', [{ filename: 'new.txt', buffer: Buffer.from('new') }]);
+
+      expect(await service.listSprints()).toEqual(['sprint-new', 'sprint-old']);
+    });
+
     it('uploads and lists files', async () => {
       const result = await service.uploadFiles('mysprint', [
         { filename: 'file1.txt', buffer: Buffer.from('content1') },

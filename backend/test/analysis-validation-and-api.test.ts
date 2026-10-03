@@ -181,6 +181,33 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
       expect(existingResponse.body.exists).toBe(true);
     });
 
+    it('saves a board without an undefined last-analyzed timestamp', async () => {
+      let savedBoard: SprintBoardData | null = null;
+      const firestoreService: IFirestoreService = {
+        saveBoardData: async (_sprintName, data) => {
+          savedBoard = data;
+        },
+        getBoardData: async () => null,
+        updateBoardData: async () => undefined,
+        deleteBoardData: async () => undefined,
+      };
+      const app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService(), firestoreService },
+      );
+
+      const response = await request(app).post('/api/sprints/mysprint/board').send({
+        analysis: null,
+        manualItems: { well: [], improve: [], actions: [] },
+        completedActionItems: [],
+        analysisCardStatus: {},
+      });
+
+      expect(response.status).toBe(200);
+      expect(savedBoard).not.toBeNull();
+      expect(Object.hasOwn(savedBoard?.metadata ?? {}, 'lastAnalyzedAt')).toBe(false);
+    });
+
     it('analyze response has correct shape', () => {
       const mockResponse = {
         sprintName: 'mysprint',
