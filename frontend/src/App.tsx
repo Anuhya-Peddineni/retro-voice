@@ -7,27 +7,46 @@ import { CreateSprintPage } from './components/pages/CreateSprintPage';
 import { BoardPage } from './components/pages/BoardPage';
 import { ContactPage } from './components/pages/ContactPage';
 import { HelpPage } from './components/pages/HelpPage';
-import { analyzeSprint, fetchSprints, uploadSprintTranscripts, getBoardData, saveBoardData, deleteBoardData } from './lib/api';
+import { analyzeSprint, fetchSprints, uploadSprintTranscripts } from './lib/api';
 import { ToastProvider, useToast } from './components/common/Toast';
 import type { AnalysisCardStatus } from './components/board/FeedbackCard';
 
+const STORAGE_KEY = 'retrovoice_session';
+
+function readSession(): { page: Page; sprint: string } {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as { page: Page; sprint: string };
+  } catch {
+    /* ignore */
+  }
+  return { page: 'home', sprint: '' };
+}
+
+function writeSession(page: Page, sprint: string) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ page, sprint }));
+  } catch {
+    /* ignore */
+  }
+}
+
 function AppContent() {
   const { showToast } = useToast();
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(() => readSession().page);
   const [sprints, setSprints] = useState<string[]>([]);
-  const [selectedSprint, setSelectedSprint] = useState<string>('');
+  const [selectedSprint, setSelectedSprint] = useState<string>(() => readSession().sprint);
   const [analysis, setAnalysis] = useState<RetroAnalysisResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingBoardData, setIsLoadingBoardData] = useState(false);
 
   // Manual items per sprint: { sprintName: { well: [], improve: [], actions: [] } }
   const [sprintManualItems, setSprintManualItems] = useState<
     Record<string, Record<ColumnKey, FeedbackItem[]>>
   >({});
 
-  // Completed action items per sprint: { sprintName: [itemId, ...] }
+  // Completed action items per sprint (kept for data model, no longer shown as checkboxes)
   const [completedActionItems, setCompletedActionItems] = useState<Record<string, string[]>>({});
 
   // Analysis card accept/reject status per sprint: { sprintName: { cardId: 'pending'|'accepted'|'rejected' } }
@@ -35,135 +54,28 @@ function AppContent() {
     Record<string, Record<string, AnalysisCardStatus>>
   >({});
 
-  // Save state
-  const [isSaving, setIsSaving] = useState(false);
-
-  async function saveCurrentBoardData() {
-    if (!selectedSprint) return;
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        analysis,
-        manualItems: sprintManualItems[selectedSprint] ?? { well: [], improve: [], actions: [] },
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: Object.fromEntries(
-          Object.entries(sprintAnalysisCardStatus[selectedSprint] ?? {}).map(([cardId, status]) => [
-            cardId,
-            status === 'accepted' || status === 'rejected' ? status : 'pending',
-          ]),
-        ) as Record<string, AnalysisCardStatus>,
-      };
-
-      await saveBoardData(selectedSprint, payload);
-      showToast('Retro saved.', 'success');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unable to save the retro board.';
-      showToast(msg, 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  const handleSaveRetro = saveCurrentBoardData;
-
-  async function clearCurrentBoardData() {
-    if (!selectedSprint) return;
-
-    try {
-      await deleteBoardData(selectedSprint);
-      setAnalysis(null);
-      setSprintManualItems((prev) => ({ ...prev, [selectedSprint]: { well: [], improve: [], actions: [] } }));
-      setCompletedActionItems((prev) => ({ ...prev, [selectedSprint]: [] }));
-      setSprintAnalysisCardStatus((prev) => ({ ...prev, [selectedSprint]: {} }));
-      showToast(`Cleared Board for ${selectedSprint}.`, 'success');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unable to clear saved board data.';
-      showToast(msg, 'error');
-    }
-  }
-
+  // Persist page + sprint to sessionStorage so reload stays in place
   useEffect(() => {
-    if (!selectedSprint) return;
-    void loadBoardData(selectedSprint);
-  }, [selectedSprint]);
+    writeSession(page, selectedSprint);
+  }, [page, selectedSprint]);
 
   useEffect(() => {
     void loadSprints();
-
-    // Save on page unload (safety net)
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (selectedSprint && (analysis || Object.keys(sprintManualItems[selectedSprint] || {}).length > 0)) {
-        void saveCurrentBoardData();
-        // Some browsers require this for unload event
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [selectedSprint, analysis, sprintManualItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadSprints(preferredSprint?: string) {
     try {
       const response = await fetchSprints();
       setSprints(response.sprints);
+      const fallback = preferredSprint ?? selectedSprint;
       const nextSprint =
-        preferredSprint ||
-        (selectedSprint && response.sprints.includes(selectedSprint)
-          ? selectedSprint
-          : response.sprints[0] || '');
+        fallback && response.sprints.includes(fallback)
+          ? fallback
+          : response.sprints[0] || '';
       setSelectedSprint(nextSprint);
     } catch {
       setSprints([]);
-    }
-  }
-
-  async function loadBoardData(sprintName: string) {
-    if (!sprintName) return;
-    setIsLoadingBoardData(true);
-    try {
-      const data = await getBoardData(sprintName);
-
-      const normalizedCardStatus = Object.fromEntries(
-        Object.entries(data.analysisCardStatus ?? {}).map(([cardId, status]) => [
-          cardId,
-          status === 'accepted' || status === 'rejected' ? status : 'pending',
-        ]),
-      ) as Record<string, AnalysisCardStatus>;
-
-      setAnalysis(data.analysis);
-      setSprintManualItems((prev: Record<string, Record<ColumnKey, FeedbackItem[]>>) => ({
-        ...prev,
-        [sprintName]: data.manualItems,
-      }));
-      setCompletedActionItems((prev: Record<string, string[]>) => ({
-        ...prev,
-        [sprintName]: data.completedActionItems,
-      }));
-      setSprintAnalysisCardStatus((prev: Record<string, Record<string, AnalysisCardStatus>>) => ({
-        ...prev,
-        [sprintName]: normalizedCardStatus,
-      }));
-    } catch (err) {
-      console.error('Failed to load board data:', err);
-      // If loading fails, start with empty data
-      setAnalysis(null);
-      setSprintManualItems((prev: Record<string, Record<ColumnKey, FeedbackItem[]>>) => ({
-        ...prev,
-        [sprintName]: { well: [], improve: [], actions: [] },
-      }));
-      setCompletedActionItems((prev: Record<string, string[]>) => ({
-        ...prev,
-        [sprintName]: [],
-      }));
-      setSprintAnalysisCardStatus((prev: Record<string, Record<string, AnalysisCardStatus>>) => ({
-        ...prev,
-        [sprintName]: {},
-      }));
-    } finally {
-      setIsLoadingBoardData(false);
     }
   }
 
@@ -186,19 +98,6 @@ function AppContent() {
     try {
       const result = await analyzeSprint(sprintName);
       setAnalysis(result);
-
-      // Immediately save analysis results to Firestore
-      const manualItems = sprintManualItems[sprintName] || { well: [], improve: [], actions: [] };
-      const actionItems = completedActionItems[sprintName] || [];
-      const cardStatus = sprintAnalysisCardStatus[sprintName] || {};
-
-      await saveBoardData(sprintName, {
-        analysis: result,
-        manualItems,
-        completedActionItems: actionItems,
-        analysisCardStatus: cardStatus,
-      });
-
       showToast(`Analysis complete for ${sprintName}!`, 'success');
     } catch (err: unknown) {
       const msg =
@@ -216,52 +115,32 @@ function AppContent() {
   // --- Analysis card handlers ---
   function handleAcceptAnalysisCard(id: string) {
     if (!selectedSprint) return;
-    setSprintAnalysisCardStatus((prev: Record<string, Record<string, AnalysisCardStatus>>) => {
-      const nextStatus = { ...(prev[selectedSprint] || {}), [id]: 'accepted' as const };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: sprintManualItems[selectedSprint] ?? { well: [], improve: [], actions: [] },
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: nextStatus,
-      });
-      return { ...prev, [selectedSprint]: nextStatus };
-    });
+    setSprintAnalysisCardStatus((prev) => ({
+      ...prev,
+      [selectedSprint]: { ...(prev[selectedSprint] || {}), [id]: 'accepted' },
+    }));
   }
 
   function handleRejectAnalysisCard(id: string) {
     if (!selectedSprint) return;
-    setSprintAnalysisCardStatus((prev: Record<string, Record<string, AnalysisCardStatus>>) => {
-      const nextStatus = { ...(prev[selectedSprint] || {}), [id]: 'rejected' as const };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: sprintManualItems[selectedSprint] ?? { well: [], improve: [], actions: [] },
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: nextStatus,
-      });
-      return { ...prev, [selectedSprint]: nextStatus };
-    });
+    setSprintAnalysisCardStatus((prev) => ({
+      ...prev,
+      [selectedSprint]: { ...(prev[selectedSprint] || {}), [id]: 'rejected' },
+    }));
     showToast('Card removed from board.', 'info');
   }
 
   function handleEditAnalysisCard(id: string, newText: string) {
     if (!analysis) return;
-    // We mutate analysis in-place by rebuilding it with updated text
-    setAnalysis((prev: RetroAnalysisResponse | null) => {
+    setAnalysis((prev) => {
       if (!prev) return prev;
       const updateInsights = (insights: typeof prev.wentWell) =>
-        insights.map((i: any) => (i.id === id ? { ...i, description: newText, title: '' } : i));
-      const next = {
+        insights.map((i) => (i.id === id ? { ...i, description: newText, title: '' } : i));
+      return {
         ...prev,
         wentWell: updateInsights(prev.wentWell),
         didntGoWell: updateInsights(prev.didntGoWell),
       };
-      void saveBoardData(selectedSprint, {
-        analysis: next,
-        manualItems: sprintManualItems[selectedSprint] ?? { well: [], improve: [], actions: [] },
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: sprintAnalysisCardStatus[selectedSprint] ?? {},
-      });
-      return next;
     });
     showToast('Card updated.', 'success');
   }
@@ -269,68 +148,48 @@ function AppContent() {
   // --- Manual item handlers ---
   function handleAddManualItem(column: ColumnKey, item: FeedbackItem) {
     if (!selectedSprint) return;
-    setSprintManualItems((prev: Record<string, Record<ColumnKey, FeedbackItem[]>>) => {
+    setSprintManualItems((prev) => {
       const sprintItems = prev[selectedSprint] || { well: [], improve: [], actions: [] };
-      const nextItems = {
+      return {
         ...prev,
         [selectedSprint]: {
           ...sprintItems,
-          [column]: [...sprintItems[column], { ...item, id: item.id ?? crypto.randomUUID() }],
+          // Prepend so newest cards appear at the top
+          [column]: [{ ...item, id: item.id ?? crypto.randomUUID() }, ...sprintItems[column]],
         },
       };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: nextItems[selectedSprint],
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: sprintAnalysisCardStatus[selectedSprint] ?? {},
-      });
-      return nextItems;
     });
     showToast('Feedback added to board.', 'success');
   }
 
   function handleEditManualItem(column: ColumnKey, id: string, newText: string) {
     if (!selectedSprint) return;
-    setSprintManualItems((prev: Record<string, Record<ColumnKey, FeedbackItem[]>>) => {
+    setSprintManualItems((prev) => {
       const sprintItems = prev[selectedSprint] || { well: [], improve: [], actions: [] };
-      const nextItems = {
+      return {
         ...prev,
         [selectedSprint]: {
           ...sprintItems,
-          [column]: sprintItems[column].map((item: FeedbackItem) =>
+          [column]: sprintItems[column].map((item) =>
             item.id === id ? { ...item, text: newText } : item,
           ),
         },
       };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: nextItems[selectedSprint],
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: sprintAnalysisCardStatus[selectedSprint] ?? {},
-      });
-      return nextItems;
     });
     showToast('Card updated.', 'success');
   }
 
   function handleDeleteManualItem(column: ColumnKey, id: string) {
     if (!selectedSprint) return;
-    setSprintManualItems((prev: Record<string, Record<ColumnKey, FeedbackItem[]>>) => {
+    setSprintManualItems((prev) => {
       const sprintItems = prev[selectedSprint] || { well: [], improve: [], actions: [] };
-      const nextItems = {
+      return {
         ...prev,
         [selectedSprint]: {
           ...sprintItems,
-          [column]: sprintItems[column].filter((item: FeedbackItem) => item.id !== id),
+          [column]: sprintItems[column].filter((item) => item.id !== id),
         },
       };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: nextItems[selectedSprint],
-        completedActionItems: completedActionItems[selectedSprint] ?? [],
-        analysisCardStatus: sprintAnalysisCardStatus[selectedSprint] ?? {},
-      });
-      return nextItems;
     });
     showToast('Card deleted.', 'info');
   }
@@ -338,23 +197,20 @@ function AppContent() {
   function handleToggleActionItem(item: FeedbackItem) {
     if (!selectedSprint) return;
     const itemKey = item.id ?? item.text;
-    setCompletedActionItems((previous: Record<string, string[]>) => {
+    setCompletedActionItems((previous) => {
       const sprintItems = previous[selectedSprint] ?? [];
-      const nextItems = {
+      return {
         ...previous,
         [selectedSprint]: sprintItems.includes(itemKey)
-          ? sprintItems.filter((id: string) => id !== itemKey)
+          ? sprintItems.filter((id) => id !== itemKey)
           : [...sprintItems, itemKey],
       };
-      void saveBoardData(selectedSprint, {
-        analysis,
-        manualItems: sprintManualItems[selectedSprint] ?? { well: [], improve: [], actions: [] },
-        completedActionItems: nextItems[selectedSprint],
-        analysisCardStatus: sprintAnalysisCardStatus[selectedSprint] ?? {},
-      });
-      return nextItems;
     });
   }
+
+  const navigateTo = (next: Page) => {
+    setPage(next);
+  };
 
   const currentManualItems = (selectedSprint && sprintManualItems[selectedSprint]) || {
     well: [],
@@ -366,14 +222,14 @@ function AppContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <AppHeader page={page} onNavigate={setPage} />
+      <AppHeader page={page} onNavigate={navigateTo} />
       <div className="flex-1">
-        {page === 'home' && <HomePage onNavigate={setPage} />}
+        {page === 'home' && <HomePage onNavigate={navigateTo} />}
         {page === 'create' && (
           <CreateSprintPage
             onCreated={(sprint) => {
               setSelectedSprint(sprint);
-              setPage('board');
+              navigateTo('board');
             }}
             onUploadAndCreate={handleUploadAndCreate}
             submitting={isUploading}
@@ -386,7 +242,6 @@ function AppContent() {
             onSelectSprint={(sprint) => {
               setSelectedSprint(sprint);
               setAnalysisError(null);
-              void loadBoardData(sprint);
             }}
             analysis={analysis}
             onAnalyze={handleAnalyze}
@@ -402,16 +257,12 @@ function AppContent() {
             onDeleteManualItem={handleDeleteManualItem}
             onToggleActionItem={handleToggleActionItem}
             error={analysisError}
-            isLoadingBoardData={isLoadingBoardData}
-            onSaveRetro={handleSaveRetro}
-            onClearRetro={clearCurrentBoardData}
-            isSaving={isSaving}
           />
         )}
         {page === 'contact' && <ContactPage />}
         {page === 'help' && <HelpPage />}
       </div>
-      <AppFooter onNavigate={setPage} />
+      <AppFooter onNavigate={navigateTo} />
     </div>
   );
 }

@@ -6,6 +6,29 @@ import { BoardColumn } from '../board/BoardColumn';
 import { FeedbackModal } from '../board/FeedbackModal';
 import type { AnalysisCardStatus } from '../board/FeedbackCard';
 
+// Save icon
+function SaveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden="true">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="7 3 7 8 15 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Trash icon
+function TrashBoardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface BoardPageProps {
   sprints: string[];
   selectedSprint: string;
@@ -24,10 +47,6 @@ interface BoardPageProps {
   onDeleteManualItem: (column: ColumnKey, id: string) => void;
   onToggleActionItem: (item: FeedbackItem) => void;
   error?: string | null;
-  isLoadingBoardData?: boolean;
-  onSaveRetro?: () => Promise<void>;
-  onClearRetro?: () => Promise<void>;
-  isSaving?: boolean;
 }
 
 export function BoardPage({
@@ -38,7 +57,6 @@ export function BoardPage({
   onAnalyze,
   isAnalyzing,
   manualItems,
-  completedActionItems,
   analysisCardStatus,
   onAcceptAnalysisCard,
   onRejectAnalysisCard,
@@ -46,12 +64,7 @@ export function BoardPage({
   onAddManualItem,
   onEditManualItem,
   onDeleteManualItem,
-  onToggleActionItem,
   error,
-  isLoadingBoardData,
-  onSaveRetro,
-  onClearRetro,
-  isSaving,
 }: BoardPageProps) {
   const [openComposer, setOpenComposer] = useState<ColumnKey | null>(null);
 
@@ -61,7 +74,7 @@ export function BoardPage({
     if (!analyzed || !analysis) return [];
     return analysis.wentWell.map((insight) => ({
       id: insight.id,
-      text: insight.title ? `${insight.title}: ${insight.description}` : insight.description,
+      text: `${insight.title}: ${insight.description}`,
       author: 'RetroVoice',
     }));
   }, [analyzed, analysis]);
@@ -70,12 +83,34 @@ export function BoardPage({
     if (!analyzed || !analysis) return [];
     return analysis.didntGoWell.map((insight) => ({
       id: insight.id,
-      text: insight.title ? `${insight.title}: ${insight.description}` : insight.description,
+      text: `${insight.title}: ${insight.description}`,
       author: 'RetroVoice',
     }));
   }, [analyzed, analysis]);
 
   const totalInsights = generatedWellItems.length + generatedImproveItems.length;
+
+  const handleSave = () => {
+    const data = JSON.stringify({ sprint: selectedSprint, manualItems, analysis }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `retro-${selectedSprint}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClear = () => {
+    if (window.confirm('Clear all cards on this board? This cannot be undone.')) {
+      // Signal parent to wipe manual items for current sprint
+      (['well', 'improve', 'actions'] as ColumnKey[]).forEach((col) => {
+        manualItems[col].forEach((item) => {
+          if (item.id) onDeleteManualItem(col, item.id);
+        });
+      });
+    }
+  };
 
   return (
     <main className="mx-auto max-w-7xl px-5 pb-16 pt-10 sm:px-8">
@@ -106,28 +141,34 @@ export function BoardPage({
             Review the sprint together and capture focused follow-up actions.
           </p>
         </div>
-        <Button
-          onClick={() => void onAnalyze(selectedSprint)}
-          disabled={isAnalyzing || !selectedSprint}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-blue-700"
-        >
-          <SparkIcon />
-          {isAnalyzing ? 'Analyzing…' : analyzed ? 'Analyze Again' : 'Analyze Sprint'}
-        </Button>
-        <Button
-          onClick={() => void onSaveRetro?.()}
-          disabled={isSaving || !selectedSprint || (!analysis && Object.keys(manualItems).length === 0)}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
-        >
-          {isSaving ? 'Saving…' : 'Save Retro'}
-        </Button>
-        <Button
-          onClick={() => void onClearRetro?.()}
-          disabled={!selectedSprint}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm text-white shadow-sm hover:bg-rose-700 disabled:opacity-50"
-        >
-          Clear Board
-        </Button>
+
+        {/* Three equal-width action buttons */}
+        <div className="grid shrink-0 grid-cols-3 gap-3">
+          <Button
+            onClick={() => void onAnalyze(selectedSprint)}
+            disabled={isAnalyzing || !selectedSprint}
+            className="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            <SparkIcon />
+            {isAnalyzing ? 'Analyzing…' : 'Analyze Sprint'}
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!selectedSprint}
+            className="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50"
+          >
+            <SaveIcon />
+            Save Board
+          </Button>
+          <Button
+            onClick={handleClear}
+            disabled={!selectedSprint}
+            className="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 shadow-sm hover:bg-rose-50"
+          >
+            <TrashBoardIcon />
+            Clear Board
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -135,15 +176,6 @@ export function BoardPage({
           <div>
             <p className="text-sm font-semibold text-rose-950">Analysis failed</p>
             <p className="mt-1 text-sm leading-6 text-rose-800">{error}</p>
-          </div>
-        </aside>
-      )}
-
-      {isLoadingBoardData && (
-        <aside className="mt-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <div>
-            <p className="text-sm font-semibold text-blue-950">Loading sprint data…</p>
-            <p className="mt-1 text-sm leading-6 text-blue-800">Retrieving your retrospective board data from storage.</p>
           </div>
         </aside>
       )}
@@ -198,8 +230,6 @@ export function BoardPage({
           icon={<ThumbsUpIcon />}
           generatedItems={[]}
           manualItems={manualItems.actions}
-          completedActionItems={completedActionItems}
-          onToggleActionItem={onToggleActionItem}
           onEditManualItem={(id, text) => onEditManualItem('actions', id, text)}
           onDeleteManualItem={(id) => onDeleteManualItem('actions', id)}
           onOpenComposer={() => setOpenComposer('actions')}

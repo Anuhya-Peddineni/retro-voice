@@ -168,10 +168,16 @@ export function CreateSprintPage({
           <TextInput
             value={name}
             onChange={(event) => {
-              setName(event.target.value);
+              const newName = event.target.value;
+              setName(newName);
               if (source === 'existing') {
                 setExistingCheckState('idle');
                 setFoundCount(0);
+                // Show toast immediately if name is non-empty but invalid
+                if (newName.trim()) {
+                  const err = validateSprintNameInput(newName.trim());
+                  if (err) showToast(err, 'error');
+                }
               }
             }}
             placeholder="e.g. sprint-24"
