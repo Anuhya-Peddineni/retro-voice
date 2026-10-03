@@ -231,11 +231,6 @@ export function CreateSprintPage({
               setDuplicateSprintError(null);
               if (source === 'existing') {
                 setExistingCheckState('idle');
-                // Show toast immediately if name is non-empty but invalid
-                if (newName.trim()) {
-                  const err = validateSprintNameInput(newName.trim());
-                  if (err) showToast(err, 'error');
-                }
               }
             }}
             placeholder="e.g. sprint-24"

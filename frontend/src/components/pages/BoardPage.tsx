@@ -296,23 +296,22 @@ export function BoardPage({
                 Do you want to clear the current retrospective for {selectedSprint}? This cannot be undone.
               </p>
             ) : (
-              <div id="board-confirmation-description" className="mt-4 flex items-start gap-2.5">
-                <button
-                  type="button"
-                  title="Cards added by RetroVoice without a decision will be excluded."
-                  aria-label="Cards added by RetroVoice without a decision will be excluded."
-                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-500"
-                >
-                  i
-                </button>
-                <p className="text-xs leading-5 text-slate-500">
+              <>
+                <p id="board-confirmation-description" className="mt-2 text-sm leading-6 text-slate-600">
                   Do you want to save the current retrospective for {selectedSprint}?
-                  <br />
-                  <span className="text-[11px]">
-                  Cards added by RetroVoice without a decision will be excluded.
-                  </span>
                 </p>
-              </div>
+                <aside className="mt-4 flex items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-blue-800">
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-blue-300 text-xs font-semibold text-blue-700"
+                  >
+                    i
+                  </span>
+                  <p className="text-xs leading-5">
+                  Cards added by RetroVoice without a decision will be excluded.
+                  </p>
+                </aside>
+              </>
             )}
             <div className="mt-6 flex justify-end gap-3">
               <Button
