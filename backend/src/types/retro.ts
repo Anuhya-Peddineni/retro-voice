@@ -50,3 +50,23 @@ export interface SprintListResult {
   sprints: string[];
 }
 
+export interface SprintBoardSaveRequest {
+  analysis: RetroAnalysisResponse | null;
+  manualItems: Record<string, any>;
+  completedActionItems: string[];
+  analysisCardStatus: Record<string, string>;
+}
+
+export interface SprintBoardResponse {
+  sprintName: string;
+  analysis: RetroAnalysisResponse | null;
+  manualItems: Record<string, any>;
+  completedActionItems: string[];
+  analysisCardStatus: Record<string, string>;
+  metadata: {
+    lastAnalyzedAt?: string;
+    lastModifiedAt: string;
+    createdAt: string;
+  };
+}
+

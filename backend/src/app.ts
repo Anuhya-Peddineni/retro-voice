@@ -9,11 +9,13 @@ import {
 } from './services/storage.service';
 import { GeminiService } from './services/gemini.service';
 import { AnalysisService } from './services/analysis.service';
+import { FirestoreService, type IFirestoreService } from './services/firestore.service';
 import type { AppEnv } from './config/env';
 
 export interface AppDependencies {
   storageService?: IStorageService;
   analysisService?: AnalysisService;
+  firestoreService?: IFirestoreService;
 }
 
 export function createApp(
@@ -33,7 +35,9 @@ export function createApp(
 
   const analysisService = dependencies.analysisService ?? createAnalysisService(env, storageService);
 
-  app.use('/api/sprints', createSprintRouter(storageService, analysisService));
+  const firestoreService = dependencies.firestoreService ?? createFirestoreService(env);
+
+  app.use('/api/sprints', createSprintRouter(storageService, analysisService, firestoreService));
 
   app.get('/api', (_req, res) => {
     res.json({
@@ -84,5 +88,15 @@ function createAnalysisService(
   });
 
   return new AnalysisService(storageService, geminiService);
+}
+
+function createFirestoreService(
+  env: Partial<Pick<AppEnv, 'GOOGLE_CLOUD_PROJECT'>>,
+): IFirestoreService | undefined {
+  if (!env.GOOGLE_CLOUD_PROJECT) {
+    return undefined;
+  }
+
+  return new FirestoreService(env.GOOGLE_CLOUD_PROJECT);
 }
 
