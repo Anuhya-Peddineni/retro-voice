@@ -38,6 +38,8 @@ RetroVoice streamlines the retrospective process by:
 **Infrastructure:**
 - **Google Cloud Storage (GCS)** - Centralized transcript and sprint storage
 - **Google Vertex AI** - Managed Gemini model service (gemini-3.8-flash)
+- **Google Cloud Firestore** - NoSQL database for persistent sprint retrospective insights
+- **Firebase Admin SDK** - Secure backend access to Firestore
 - **Cloud Run** - Serverless backend deployment
 - **Firebase Hosting** - Frontend hosting (deployed via `npm run deploy:hosting`)
 
@@ -46,53 +48,6 @@ RetroVoice streamlines the retrospective process by:
 - **Stitch** - UI brainstorming and logo design; used for initial ideation and visual direction
 - **Figma** - Functional prototype and design system; all UI components and workflows designed in Figma before development
 - **Antigravity** - Converts Figma prototypes into production React code; bridges the gap between design and implementation
-
-## Workspace structure
-
-```
-retro-voice/
-├── backend/                          # Express + TypeScript REST API
-│   ├── src/
-│   │   ├── controllers/             # HTTP request handlers (SprintController)
-│   │   ├── services/                # Business logic (Analysis, Gemini, Storage)
-│   │   ├── routes/                  # API endpoint definitions (sprint, health routes)
-│   │   ├── middleware/              # CORS, error handling, Multer file upload
-│   │   ├── validators/              # Input validation (sprint, files, analysis response)
-│   │   ├── prompts/                 # Gemini system and user prompts with JSON schema
-│   │   ├── utils/                   # VTT subtitle parser for transcript extraction
-│   │   ├── types/                   # TypeScript domain types (RetroAnalysisSchema, etc.)
-│   │   ├── config/                  # Environment configuration with Zod validation
-│   │   ├── app.ts                   # Express app factory with dependency injection
-│   │   └── index.ts                 # Server entry point with graceful shutdown
-│   ├── test/                        # Integration and unit tests
-│   ├── dist/                        # Compiled TypeScript output (created by npm run build)
-│   ├── package.json                 # Dependencies and scripts
-│   └── tsconfig.json                # TypeScript configuration
-│
-├── frontend/                         # React + Vite + TypeScript UI application
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── pages/              # Page-level components (Create, Board, Home, etc.)
-│   │   │   ├── board/              # Retrospective board components (Column, Cards, Modals)
-│   │   │   ├── layout/             # Header and footer layout components
-│   │   │   └── common/             # Shared UI components (Button, Input, Toast, Icons)
-│   │   ├── lib/                    # API client and validation utilities
-│   │   ├── types/                  # TypeScript type definitions (RetroAnalysisResponse, etc.)
-│   │   ├── App.tsx                 # Root component with state management and page routing
-│   │   ├── main.tsx                # React entry point with ToastProvider
-│   │   └── index.css               # Global Tailwind CSS styles
-│   ├── public/                     # Static assets (logos, icons)
-│   ├── dist/                       # Built frontend output (created by npm run build)
-│   ├── package.json                # Dependencies and scripts
-│   ├── vite.config.ts              # Vite build configuration with React plugin
-│   ├── tsconfig.app.json           # App TypeScript configuration
-│   └── index.html                  # HTML entry point
-│
-├── dataset/                         # Sample VTT transcript files for testing
-│   └── sprint-transcripts/         # Example sprint-01-day-01.vtt, etc.
-│
-└── README.md                        # This file
-```
 
 ## Features
 
@@ -106,6 +61,9 @@ retro-voice/
 - ✅ **Action Tracking** - Mark action items as completed
 - ✅ **Multi-file Analysis** - Combine multiple transcripts for comprehensive insights
 - ✅ **Transcript Storage** - Sprint transcripts stored in Google Cloud Storage (one folder per sprint)
+- ✅ **Persistent Data** - All sprint retrospective insight saved to Firestore, allowing to revisit previous retrospectives
+- ✅ **Manual Save** - Team controls when data is persisted with explicit "Save Board" action
+- ✅ **Manual Clear** - Team can clear saved board data for a specific sprint with explicit "Clear Board" action
 
 ### Frontend Features
 - 📋 **Sprint List** - Browse existing sprints and create new ones
@@ -117,6 +75,7 @@ retro-voice/
 - ✓ **Completion Tracking** - Mark action items as done
 - 📝 **Help & Contact** - Quick-start guide and support contact page
 - 🔄 **Accept/Reject/Edit AI Generated Insights** - Allow users to reject AI-generated insights and edit cards for clarity or additional context
+- ✓ **Save/Clear Board** - Save/Clear Board buttons to persist or reset the retrospective board for a sprint
 
 ## Local Development Setup
 
@@ -196,6 +155,28 @@ The frontend will start at `http://localhost:5173`
     - Calls Gemini API with anonymization and structured output
     - Returns: `{ sprintName: string, summary: { totalFiles: number, generatedAt: ISO8601 }, wentWell: RetroInsight[], didntGoWell: RetroInsight[] }`
 
+### Sprint Board Data Persistence
+- `GET /api/sprints/:sprintName/board` - Retrieve saved sprint board data from Firestore
+    - Returns: `{ sprintName: string, analysis: RetroAnalysisResponse | null, manualItems: { well: [], improve: [], actions: [] }, completedActionItems: [], analysisCardStatus: {...}, metadata: { createdAt, lastAnalyzedAt, lastModifiedAt } }`
+    - Returns empty data if no board data exists for the sprint
+    - Called when user switches to a sprint to load previously saved data
+
+- `POST /api/sprints/:sprintName/board` - Save complete sprint board data to Firestore
+    - Body: `{ analysis: RetroAnalysisResponse, manualItems: {...}, completedActionItems: [...], analysisCardStatus: {...} }`
+    - Returns: `{ success: true, sprintName: string }`
+    - Called after sprint analysis completes to save AI results
+    - Also called when user clicks "Save Board" button
+
+- `PUT /api/sprints/:sprintName/board` - Update board data in Firestore
+    - Body: Any subset of `{ analysis, manualItems, completedActionItems, analysisCardStatus }` to update
+    - Returns: `{ success: true, sprintName: string }`
+    - Called when user clicks "Save Board" to save accumulated changes
+    - Called on page unload as safety measure
+  
+- `DELETE /api/sprints/:sprintName/board` - Clear saved board data for a sprint
+    - Returns: `{ success: true, sprintName: string }`
+    - Called when user clicks "Clear Board" button to reset the retrospective board for a sprint
+
 ### Health & Status
 - `GET /api/health` - Service health check
     - Returns: `{ status: string, service: string }`
@@ -267,6 +248,20 @@ Common error codes:
 ## Core Backend Services
 
 ### Services Layer
+
+**FirestoreService**
+- Integrates with Google Cloud Firestore for persistent sprint data storage
+- Stores one document per sprint with:
+    - Analysis results (AI-generated insights)
+    - Manual items (user-added feedback)
+    - Card status (accept/reject decisions on AI insights)
+    - Completed action items
+    - Metadata (created, last analyzed, last modified timestamps)
+- Methods:
+    - `saveBoardData()` - Initial save of complete board data
+    - `getBoardData()` - Retrieve saved data for a sprint
+    - `updateBoardData()` - Partial update for auto-save operations
+- Firebase Admin SDK authentication via service account credentials
 
 **AnalysisService**
 - Orchestrates sprint analysis workflow
@@ -344,9 +339,16 @@ Common error codes:
 - **sprintAnalysisCardStatus** - Track user interactions with AI cards: pending, accepted, or rejected
 - **isAnalyzing** - Loading state for AI analysis operation
 - **isUploading** - Loading state for file upload operation
+- **isLoadingBoardData** - Loading state when retrieving saved sprint data from Firestore
+- **isSaving** - Loading state when manually saving retrospective data
 - **analysisError** - Error message from failed analysis attempts
 
-All of this state is held in memory in React and is reset when the page is refreshed.
+**Data Persistence**: State is persisted to Firestore at key points:
+- Analysis results are automatically saved when analysis completes
+- Manual changes (items, edits, deletions) are kept in memory during the meeting
+- "Save Board" button explicitly saves all current state to Firestore
+- Page unload listener provides safety net to prevent accidental data loss
+- When user selects a different sprint, board data is loaded from Firestore and populates React state
 
 ### Pages
 
@@ -364,6 +366,10 @@ All of this state is held in memory in React and is reset when the page is refre
 
 - **BoardPage** - Main retrospective analysis and collaboration board:
     - Sprint selector dropdown to switch between sprints
+    - Loading indicator while retrieving sprint data from Firestore
+    - "Analyze Sprint" button to trigger AI analysis (saves automatically)
+    - "Save Board" button to manually save all board changes to Firestore
+    - "Clear Board" button to manually clear the board for an existing sprint
     - Three-column layout:
         - "What Went Well" - Positive insights and successes (AI + manual)
         - "What Didn't Go Well" - Challenges, blockers, and issues (AI + manual)
@@ -463,9 +469,18 @@ The backend runs on **Cloud Run** and the frontend on **Firebase Hosting**. For 
     - User can manually add feedback to any column
     - Manual and AI items can be edited or deleted
     - Action items tracked with completion status
-    - Board changes are kept in memory in the browser and are lost on page refresh
+    - Board changes are kept in memory during the meeting
 
-7. **Continuous Refinement**
+7. **Manual Save**
+    - Team reviews all feedback and makes final edits
+    - Click "Save Board" button when meeting is complete
+    - All board state (manual items, card status, action items) persisted to Firestore
+    - Data now available to team members across sessions
+   
+8. **Manual Clear**
+    - Click "Clear Board" button for clearing the existing sprint retrospective insights
+
+9. **Continuous Refinement**
     - Reject AI cards that don't match sprint reality
     - Edit cards for clarity or additional context
     - Add manual feedback that AI missed
