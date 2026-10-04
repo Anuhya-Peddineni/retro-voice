@@ -52,19 +52,24 @@ export class GoogleCloudStorageService implements IStorageService {
   }
 
   async listSprints(): Promise<string[]> {
-    const [, , apiResponse] = await this.storage.bucket(this.options.bucketName).getFiles({
-      autoPaginate: false,
-      delimiter: '/',
-    });
+    const [files] = await this.storage.bucket(this.options.bucketName).getFiles();
+    const firstCreatedAtBySprint = new Map<string, number>();
 
-    const prefixes = Array.isArray((apiResponse as { prefixes?: string[] } | undefined)?.prefixes)
-        ? (apiResponse as { prefixes: string[] }).prefixes
-        : [];
+    for (const file of files) {
+      const separatorIndex = file.name.indexOf('/');
+      if (separatorIndex <= 0 || separatorIndex === file.name.length - 1) continue;
 
-    return prefixes
-        .map((prefix: string) => prefix.replace(/\/$/, ''))
-        .filter(Boolean)
-        .sort((left: string, right: string) => left.localeCompare(right));
+      const sprintName = file.name.slice(0, separatorIndex);
+      const createdAt = Date.parse(file.metadata.timeCreated ?? '') || 0;
+      firstCreatedAtBySprint.set(
+        sprintName,
+        Math.min(firstCreatedAtBySprint.get(sprintName) ?? Number.POSITIVE_INFINITY, createdAt),
+      );
+    }
+
+    return Array.from(firstCreatedAtBySprint.entries())
+      .sort(([leftName, leftTime], [rightName, rightTime]) => rightTime - leftTime || leftName.localeCompare(rightName))
+      .map(([sprintName]) => sprintName);
   }
 
   async uploadFiles(sprintName: string, files: UploadableTranscriptFile[]): Promise<TranscriptFileMeta[]> {
@@ -144,7 +149,7 @@ export class LocalStorageService implements IStorageService {
   private files: Map<string, Map<string, Buffer>> = new Map();
 
   async listSprints(): Promise<string[]> {
-    return Array.from(this.files.keys()).sort();
+    return Array.from(this.files.keys()).reverse();
   }
 
   async uploadFiles(sprintName: string, files: Array<{ filename: string; buffer: Buffer }>): Promise<TranscriptFileMeta[]> {

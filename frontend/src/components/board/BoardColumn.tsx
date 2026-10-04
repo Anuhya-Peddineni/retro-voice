@@ -10,12 +10,10 @@ export function BoardColumn({
   icon,
   generatedItems = [],
   manualItems = [],
-  completedActionItems = [],
   analysisCardStatus = {},
   onAcceptAnalysisCard,
   onRejectAnalysisCard,
   onEditAnalysisCard,
-  onToggleActionItem,
   onEditManualItem,
   onDeleteManualItem,
   onOpenComposer,
@@ -25,12 +23,10 @@ export function BoardColumn({
   icon: React.ReactNode;
   generatedItems?: FeedbackItem[];
   manualItems?: FeedbackItem[];
-  completedActionItems?: string[];
   analysisCardStatus?: Record<string, AnalysisCardStatus>;
   onAcceptAnalysisCard?: (id: string) => void;
   onRejectAnalysisCard?: (id: string) => void;
   onEditAnalysisCard?: (id: string, newText: string) => void;
-  onToggleActionItem?: (item: FeedbackItem) => void;
   onEditManualItem?: (id: string, newText: string) => void;
   onDeleteManualItem?: (id: string) => void;
   onOpenComposer: () => void;
@@ -73,6 +69,19 @@ export function BoardColumn({
       </Button>
 
       <div className="mt-3 flex flex-1 flex-col gap-3">
+        {/* Manual items */}
+        {manualItems.map((item, idx) => {
+          const itemId = item.id ?? `manual-${item.author}-${idx}-${item.text}`;
+          return (
+            <FeedbackCard
+              key={itemId}
+              item={item}
+              onEdit={(newText) => onEditManualItem?.(itemId, newText)}
+              onDelete={() => onDeleteManualItem?.(itemId)}
+            />
+          );
+        })}
+
         {/* AI-generated items */}
         {visibleGeneratedItems.map((item, idx) => {
           const itemId = item.id ?? `${item.author}-${idx}-${item.text}`;
@@ -88,26 +97,7 @@ export function BoardColumn({
               onAccept={() => onAcceptAnalysisCard?.(itemId)}
               onReject={() => onRejectAnalysisCard?.(itemId)}
               onEdit={(newText) => onEditAnalysisCard?.(itemId, newText)}
-              onDelete={() => onRejectAnalysisCard?.(itemId)} // deleting an AI card = reject it
-              checkable={type === 'actions' && isAccepted}
-              checked={completedActionItems.includes(itemId)}
-              onCheckedChange={() => onToggleActionItem?.(item)}
-            />
-          );
-        })}
-
-        {/* Manual items */}
-        {manualItems.map((item, idx) => {
-          const itemId = item.id ?? `manual-${item.author}-${idx}-${item.text}`;
-          return (
-            <FeedbackCard
-              key={itemId}
-              item={item}
-              checkable={type === 'actions'}
-              checked={completedActionItems.includes(itemId)}
-              onCheckedChange={() => onToggleActionItem?.(item)}
-              onEdit={(newText) => onEditManualItem?.(itemId, newText)}
-              onDelete={() => onDeleteManualItem?.(itemId)}
+              onDelete={() => onRejectAnalysisCard?.(itemId)}
             />
           );
         })}

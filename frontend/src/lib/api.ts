@@ -79,6 +79,7 @@ export async function analyzeSprint(sprintName: string): Promise<RetroAnalysisRe
 }
 
 export interface SprintBoardData {
+  exists: boolean;
   sprintName: string;
   analysis: RetroAnalysisResponse | null;
   manualItems: Record<string, any>;

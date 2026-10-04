@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { createApp } from '../src/app';
 import { LocalStorageService } from '../src/services/storage.service';
+import type { IFirestoreService, SprintBoardData } from '../src/services/firestore.service';
 import type { RetroAnalysisSchema } from '../src/types/retro';
 
 describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
@@ -148,6 +149,65 @@ describe('RetroVoice Backend - Phases 7, 8, 9: Gemini & Analysis', () => {
   });
 
   describe('Response Contract Validation', () => {
+    it('reports whether a sprint board already exists', async () => {
+      const boardData: SprintBoardData = {
+        sprintName: 'mysprint',
+        analysis: null,
+        manualItems: { well: [], improve: [], actions: [] },
+        completedActionItems: [],
+        analysisCardStatus: {},
+        metadata: {
+          lastModifiedAt: '2026-10-03T00:00:00.000Z',
+          createdAt: '2026-10-03T00:00:00.000Z',
+        },
+      };
+      const makeApp = (storedBoard: SprintBoardData | null) => {
+        const firestoreService: IFirestoreService = {
+          saveBoardData: async () => undefined,
+          getBoardData: async () => storedBoard,
+          updateBoardData: async () => undefined,
+          deleteBoardData: async () => undefined,
+        };
+        return createApp(
+          { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+          { storageService: new LocalStorageService(), firestoreService },
+        );
+      };
+
+      const missingResponse = await request(makeApp(null)).get('/api/sprints/mysprint/board');
+      const existingResponse = await request(makeApp(boardData)).get('/api/sprints/mysprint/board');
+
+      expect(missingResponse.body.exists).toBe(false);
+      expect(existingResponse.body.exists).toBe(true);
+    });
+
+    it('saves a board without an undefined last-analyzed timestamp', async () => {
+      let savedBoard: SprintBoardData | null = null;
+      const firestoreService: IFirestoreService = {
+        saveBoardData: async (_sprintName, data) => {
+          savedBoard = data;
+        },
+        getBoardData: async () => null,
+        updateBoardData: async () => undefined,
+        deleteBoardData: async () => undefined,
+      };
+      const app = createApp(
+        { FRONTEND_ORIGIN: 'http://localhost:5173', GEMINI_MODEL: 'gemini-3.8-flash' },
+        { storageService: new LocalStorageService(), firestoreService },
+      );
+
+      const response = await request(app).post('/api/sprints/mysprint/board').send({
+        analysis: null,
+        manualItems: { well: [], improve: [], actions: [] },
+        completedActionItems: [],
+        analysisCardStatus: {},
+      });
+
+      expect(response.status).toBe(200);
+      expect(savedBoard).not.toBeNull();
+      expect(Object.hasOwn(savedBoard?.metadata ?? {}, 'lastAnalyzedAt')).toBe(false);
+    });
+
     it('analyze response has correct shape', () => {
       const mockResponse = {
         sprintName: 'mysprint',

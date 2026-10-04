@@ -58,6 +58,7 @@ export interface SprintBoardSaveRequest {
 }
 
 export interface SprintBoardResponse {
+  exists: boolean;
   sprintName: string;
   analysis: RetroAnalysisResponse | null;
   manualItems: Record<string, any>;
